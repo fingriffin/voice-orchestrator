@@ -16,7 +16,14 @@ def main(
     log_level: str,
     log_file: str | None = None,
 ) -> None:
-    """Run VOICE orchestrator with the specified configuration."""
+    """
+    Run VOICE orchestrator with the specified configuration.
+
+    :param config_path: Path to the configuration file
+    :param log_level: Logging level
+    :param log_file: Log file path
+    :return: None
+    """
     # Setup logging
     setup_logging(level=log_level, log_file=log_file)
 
