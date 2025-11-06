@@ -23,6 +23,8 @@ repos:
         args: ["--config-file", "mypy.ini"]
         additional_dependencies:
           - types-PyYAML
+          - types-requests
+          - types-paramiko
 
   - repo: https://github.com/pycqa/isort
     rev: 7.0.0

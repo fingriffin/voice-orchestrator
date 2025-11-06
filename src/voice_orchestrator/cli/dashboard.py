@@ -3,7 +3,6 @@
 import os
 import time
 import webbrowser
-from getpass import getpass
 
 import click
 from dotenv import load_dotenv
@@ -11,34 +10,36 @@ from loguru import logger
 from sshtunnel import SSHTunnelForwarder
 
 from voice_orchestrator.logging import setup_logging
+from voice_orchestrator.runpod import ZenMLHostPod
 
 
 @click.command()
 def main() -> None:
     """
-    Open ZenML dashboard via SSH tunnel.
+    Spin up ZenML host pod and open dashboard via SSH tunnel.
 
     :return: None
     """
     # Setup logging and get environment variables
     setup_logging()
 
+    # Spin up zenml host pod
+    zenml_host = ZenMLHostPod()
+
     load_dotenv()
-    ssh_host = os.getenv("RUNPOD_SSH_HOST")
-    ssh_port = int(os.getenv("RUNPOD_SSH_PORT", "22"))
-    ssh_user = os.getenv("RUNPOD_SSH_USER", "root")
-    ssh_key = os.getenv("RUNPOD_SSH_KEY_PATH")
-    zenml_port = int(os.getenv("ZENML_PORT", "8237"))
-    if not all([ssh_host, ssh_key]):
+    ssh_host = zenml_host.public_ip
+    zenml_host_port = zenml_host.port
+    zenml_port = int(os.getenv("ZENML_PORT")) # type: ignore[arg-type]
+    if not all([ssh_host, zenml_host.ssh_key_path]):
         raise click.ClickException("Missing SSH details in .env")
 
     # Create SSH tunnel
     logger.info("Creating SSH tunnel to {}", ssh_host)
     tunnel = SSHTunnelForwarder(
-        (ssh_host, ssh_port),
-        ssh_username=ssh_user,
-        ssh_private_key=ssh_key,
-        ssh_private_key_password=getpass(f"Enter passphrase for key {ssh_key}: "),
+        (ssh_host, zenml_host_port),
+        ssh_username=zenml_host.ssh_user,
+        ssh_private_key=zenml_host.ssh_key_path,
+        ssh_private_key_password=zenml_host.passphrase,
         remote_bind_address=("127.0.0.1", zenml_port),
         local_bind_address=("127.0.0.1", zenml_port),
     )
