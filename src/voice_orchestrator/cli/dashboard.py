@@ -23,7 +23,7 @@ def main() -> None:
     # Setup logging and get environment variables
     setup_logging()
 
-    # Spin up zenml host pod
+    # Spin up zenml host pod (and start server)
     zenml_host = ZenMLHostPod()
 
     load_dotenv()
