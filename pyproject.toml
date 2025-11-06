@@ -17,6 +17,7 @@ dependencies = [
 
 [project.scripts]
 dashboard = "voice_orchestrator.cli.dashboard:main"
+run = "voice_orchestrator.cli.run:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
