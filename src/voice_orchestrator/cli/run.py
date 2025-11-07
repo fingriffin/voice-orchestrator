@@ -42,4 +42,4 @@ def main(
 
     client = connect_to_zenml_server()
 
-    client.list_stacks() # placeholder to satisfy pre-commit
+    client.list_stacks() # type: ignore[union-attr]

@@ -15,7 +15,7 @@ from voice_orchestrator.runpod import ZenMLHostPod
 
 LOCAL_HOST = "127.0.0.1"
 
-def connect_to_zenml_server(launch: bool = False) -> Client:
+def connect_to_zenml_server(launch: bool = False) -> Client | None:
     """
     Connect to the remote ZenML server.
 
@@ -24,7 +24,7 @@ def connect_to_zenml_server(launch: bool = False) -> Client:
     - Creates SSH tunnel to the zenml server
 
     :param launch: whether to launch ZenML in a browser, if not returns the client
-    :return: ZenML client connected to the remote server
+    :return: ZenML client connected to the remote server or None if launched in browser
     """
     # Spin up zenml host pod (and start server)
     zenml_host = ZenMLHostPod()
@@ -57,6 +57,7 @@ def connect_to_zenml_server(launch: bool = False) -> Client:
                 time.sleep(1)
         except KeyboardInterrupt:
             tunnel.stop()
+            return None
     else:
         # Create zenml client
         cfg = RestZenStoreConfiguration(url=server_url, verify_ssl=False)
