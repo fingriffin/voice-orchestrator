@@ -21,7 +21,7 @@ class Pod:
     def __init__(
             self,
             name: str,
-            image_name: str = "runpod/base:0.7.0-ubuntu2004",
+            image_name: str = "runpod/base:0.7.0-ubuntu2404",
             gpu_type_id: str | None = None,
             gpu_count: int | None = None,
             network_volume_id: str | None = None,

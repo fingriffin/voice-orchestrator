@@ -5,6 +5,7 @@ from loguru import logger
 
 from voice_orchestrator.config import load_master_config
 from voice_orchestrator.logging import setup_logging
+from voice_orchestrator.zenml import connect_to_zenml_server
 
 
 @click.command()
@@ -38,3 +39,7 @@ def main(
     except Exception as e:
         logger.error("Failed to load config: {}", e)
         raise
+
+    client = connect_to_zenml_server()
+
+    client.list_stacks() # placeholder to satisfy pre-commit
