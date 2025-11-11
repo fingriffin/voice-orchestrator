@@ -12,6 +12,7 @@ import runpod
 from dotenv import load_dotenv
 from loguru import logger
 
+from voice_orchestrator.constants import ShellCommands
 from voice_orchestrator.logging import setup_logging
 
 
@@ -208,12 +209,7 @@ class ZenMLHostPod(Pod):
         try:
             logger.info("Starting ZenML server on pod...")
             output = self.execute(
-                command=(
-                    'export PATH="/runpod-volume/.local/bin:$PATH" && '
-                    'cd /runpod-volume && '
-                    'source .venv/bin/activate && '
-                    'zenml up'
-                )
+                command=ShellCommands.ZENML_HOST_STARTUP
             )
 
             if output:
