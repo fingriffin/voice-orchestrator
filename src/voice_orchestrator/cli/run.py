@@ -1,11 +1,15 @@
 """CLI to run VOICE orchestrator with a specified configuration."""
 
+import os
+from datetime import datetime
+
 import click
+import wandb
+from dotenv import load_dotenv
 from loguru import logger
 
-from voice_orchestrator.config import load_master_config
+from voice_orchestrator.config import load_master_config, load_wandb_config
 from voice_orchestrator.logging import setup_logging
-from voice_orchestrator.runpod import FinetuningPod
 
 
 @click.command()
@@ -26,6 +30,7 @@ def main(
     :return: None
     """
     # Setup logging
+    load_dotenv()
     setup_logging(level=log_level, log_file=log_file)
 
     # Load config
@@ -40,7 +45,27 @@ def main(
         logger.error("Failed to load config: {}", e)
         raise
 
-    # Spin up finetuning pod
-    finetuning_pod = FinetuningPod(gpu_type_id=config.gpu_type_finetune) # type: ignore[arg-type]
+    # Prepare wandb run
+    os.environ["WANDB_DIR"] = "/tmp" # Avoid flooding repo with wandb runs
+    timestamp = datetime.now().strftime("%H-%M-%d-%m-%y")
+    name = config.name + "-" + timestamp
+    wandb_config = load_wandb_config(config_path)
 
-    __ = finetuning_pod # Placeholder for linter
+    # Start wandb run
+    wandb_run = wandb.init(
+        project=os.getenv("WANDB_PROJECT"),
+        entity=os.getenv("WANDB_ENTITY"),
+        name=name,
+        config=wandb_config,
+    )
+
+    # Log config file as artifact for reproducibility
+    cfg_artifact = wandb.Artifact(
+        name=f"{name}_config",
+        type="MasterConfig",
+        description="YAML config used for this run"
+    )
+    cfg_artifact.add_file(config_path)
+    wandb_run.log_artifact(cfg_artifact).wait()
+
+    wandb_run.finish()

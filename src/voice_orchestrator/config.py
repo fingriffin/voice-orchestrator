@@ -1,7 +1,7 @@
 """Configuration management for unified master configuration (finetuning + inference)."""
 
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -136,3 +136,20 @@ def load_master_config(config_path: str) -> MasterConfig:
 
     config_dict = yaml.safe_load("".join(lines))
     return MasterConfig(**config_dict)
+
+def load_wandb_config(config_path: str) -> dict[str, Any]:
+    """
+    Load the YAML file at config_path and returns its contents as a dictionary.
+
+    Creates nicer visualisation in the wandb dashboard.
+
+    :param config_path: Path to YAML file.
+    :return: Dictionary of the YAML file contents.
+    """
+    with open(config_path, "r") as f:
+        config_dict = yaml.safe_load(f) or {}
+
+    if "name" in config_dict:
+        config_dict.pop("name")
+
+    return config_dict
