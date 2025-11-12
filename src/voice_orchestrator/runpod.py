@@ -12,7 +12,7 @@ import runpod
 from dotenv import load_dotenv
 from loguru import logger
 
-from voice_orchestrator.constants import ImageNames, ShellCommands, TemplateIds
+from voice_orchestrator.constants import ImageNames, TemplateIds
 from voice_orchestrator.logging import setup_logging
 
 
@@ -183,52 +183,6 @@ class Pod:
             return None
 
         return str(output.strip())
-
-
-
-class ZenMLHostPod(Pod):
-    """Pod class to manage ZenML host CPU pod."""
-
-    def __init__(
-            self,
-            name: str = "zenml-host",
-            image_name: str = ImageNames.CPU,
-            network_volume_id: str | None = "kh451m6un6",
-    ):
-        """
-        Initialise ZenMLHostPod class.
-
-        Starts ZenML server on the pod at startup.
-
-        :param name: name of the pod
-        :param network_volume_id: network volume id to mount to the pod
-        """
-        super().__init__(
-            name=name,
-            image_name=image_name,
-            network_volume_id=network_volume_id,
-        )
-
-        # Up zenml server
-        self._up_server()
-
-    def _up_server(self) -> None:
-        """
-        Start ZenML server on the pod.
-
-        :return: None
-        """
-        try:
-            logger.info("Starting ZenML server on pod...")
-            output = self.execute(
-                command=ShellCommands.ZENML_HOST_STARTUP
-            )
-
-            if output:
-                logger.success("ZenML server started successfully.")
-
-        except Exception as e:
-            logger.exception(f"Failed to start ZenML server: {e}")
 
 class FinetuningPod(Pod):
     """Pod class to manage finetuning GPU pod."""

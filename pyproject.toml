@@ -13,7 +13,6 @@ dependencies = [
     "sshtunnel>=0.4.0",
     "types-paramiko>=4.0.0.20250822",
     "types-requests>=2.32.4.20250913",
-    "zenml[local]>=0.91.0",
 ]
 
 [project.scripts]

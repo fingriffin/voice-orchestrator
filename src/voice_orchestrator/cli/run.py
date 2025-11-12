@@ -6,7 +6,6 @@ from loguru import logger
 from voice_orchestrator.config import load_master_config
 from voice_orchestrator.logging import setup_logging
 from voice_orchestrator.runpod import FinetuningPod
-from voice_orchestrator.zenml import connect_to_zenml_server
 
 
 @click.command()
@@ -40,11 +39,6 @@ def main(
     except Exception as e:
         logger.error("Failed to load config: {}", e)
         raise
-
-    # Connect to ZenML server
-    client = connect_to_zenml_server()
-
-    _ = client  # Placeholder for linter
 
     # Spin up finetuning pod
     finetuning_pod = FinetuningPod(gpu_type_id=config.gpu_type_finetune) # type: ignore[arg-type]
