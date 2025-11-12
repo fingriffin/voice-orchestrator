@@ -44,8 +44,9 @@ def main(
     # Connect to ZenML server
     client = connect_to_zenml_server()
 
+    _ = client  # Placeholder for linter
+
     # Spin up finetuning pod
     finetuning_pod = FinetuningPod(gpu_type_id=config.gpu_type_finetune) # type: ignore[arg-type]
 
-    _ = client # Placeholder for linter
     __ = finetuning_pod # Placeholder for linter

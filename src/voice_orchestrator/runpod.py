@@ -258,28 +258,3 @@ class FinetuningPod(Pod):
             gpu_type_id=gpu_type_id,
             gpu_count=gpu_count,
         )
-
-        self._send_ssh_credentials()
-
-    def _send_ssh_credentials(self) -> None:
-        """Send SSH private key to the pod."""
-        remote_path = "/root/.ssh/id_ed25519"
-        local_path = self.ssh_key_path
-
-        logger.info(f"Uploading SSH key from {local_path} to {remote_path}...")
-
-        ssh = self._connect_ssh()
-        sftp = ssh.open_sftp()
-
-        try:
-            sftp.mkdir("/root/.ssh", mode=0o700)
-        except IOError:
-            # Directory should exist anyway
-            pass
-
-        sftp.put(local_path, remote_path)
-        sftp.chmod(remote_path, 0o600)
-        sftp.close()
-        ssh.close()
-
-        logger.success("SSH key uploaded successfully to pod.")
