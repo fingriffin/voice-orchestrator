@@ -16,7 +16,7 @@ finetune:
   gradient_checkpointing: true # Whether to use gradient checkpointing
 
   optimizer: paged_adamw_32bit # Optimizer to use
-  gpu_type: # GPU type (e.g. A100) to use for finetuning
+  gpu_type: # GPU type (e.g. NVIDIA A40) to use for finetuning
   gpus: 1 # Number of GPUs to use
 
   epochs: 3 # Number of training epochs
@@ -43,7 +43,7 @@ inference:
 
   split: test # Split of the dataset to use for inference (e.g. train, validation, test)
 
-  gpu_type: # GPU type (e.g. A100) to use
+  gpu_type: # GPU type (e.g. NVIDIA A40) to use
   gpus: 1 # Number of GPUs to use
   max_tokens: 2048 # Maximum number of tokens for generation
 

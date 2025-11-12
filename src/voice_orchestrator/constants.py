@@ -10,3 +10,15 @@ class ShellCommands:
         'source .venv/bin/activate && '
         'zenml up'
     )
+
+class TemplateIds:
+    """RunPod template IDs."""
+
+    FINETUNE = "eziymt38z4"
+    INFERENCE = "lwox0565zs"
+
+class ImageNames:
+    """RunPod image names."""
+
+    CPU = "runpod/base:0.7.0-ubuntu2404"
+    FINETUNE = "ghcr.io/fingriffin/voice-finetune:latest" # Private

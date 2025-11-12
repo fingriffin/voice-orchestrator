@@ -12,7 +12,7 @@ import runpod
 from dotenv import load_dotenv
 from loguru import logger
 
-from voice_orchestrator.constants import ShellCommands
+from voice_orchestrator.constants import ImageNames, ShellCommands, TemplateIds
 from voice_orchestrator.logging import setup_logging
 
 
@@ -22,6 +22,7 @@ class Pod:
     def __init__(
             self,
             name: str,
+            template_id: str | None = None,
             image_name: str = "runpod/base:0.7.0-ubuntu2404",
             gpu_type_id: str | None = None,
             gpu_count: int | None = None,
@@ -44,6 +45,7 @@ class Pod:
         load_dotenv()
 
         self.name = name
+        self.template_id = template_id
         self.image_name = image_name
         self.support_public_ip = True
         self.start_ssh = True
@@ -55,7 +57,7 @@ class Pod:
         self.api_key = os.getenv("RUNPOD_API_KEY")
         runpod.api_key = self.api_key
 
-        self._get_user_ssh()
+        self._get_user_ssh() # TODO: Make this a class level method?
 
         # Check if pod exists (unique by name)
         self.pods: list[dict] = []
@@ -76,6 +78,7 @@ class Pod:
             with contextlib.redirect_stdout(silent):
                 self.pod = runpod.create_pod(
                     name=self.name,
+                    template_id=self.template_id,
                     image_name=self.image_name,
                     support_public_ip=self.support_public_ip,
                     start_ssh=self.start_ssh,
@@ -105,7 +108,7 @@ class Pod:
         else:
             return any(pod.get("name") == self.name for pod in self.pods)
 
-    def _wait_for_pod(self, timeout: int = 300, interval: int = 1) -> None:
+    def _wait_for_pod(self, timeout: int = 900, interval: int = 1) -> None:
         """
         Wait until the pod is SSH ready.
 
@@ -139,9 +142,26 @@ class Pod:
         ip = data["publicIp"]
         if ip:
             port = data["portMappings"]["22"]
+            # For GPU pods, the above is overwritten to udp port
+            if self.gpu_count:
+                # Runpod assigns tcp port as udp port -1
+                port -= 1
         else:
             port = None
         return ip, port
+
+    def _connect_ssh(self) -> paramiko.SSHClient:
+        """Create and return a connected Paramiko SSH client."""
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(
+            hostname=self.public_ip,  # type: ignore[arg-type]
+            port=self.port,  # type: ignore[arg-type]
+            username=self.ssh_user,
+            key_filename=self.ssh_key_path,
+            passphrase=self.passphrase,
+        )
+        return ssh
 
     def execute(self, command: str) -> str | None:
         """
@@ -150,17 +170,7 @@ class Pod:
         :param command: command to execute
         :return: output of the command or None if error occurs
         """
-        # Set up SSH client
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-        ssh.connect(
-            hostname=self.public_ip, # type: ignore[arg-type]
-            port=self.port, # type: ignore[arg-type]
-            username=self.ssh_user,
-            key_filename=self.ssh_key_path,
-            passphrase=self.passphrase,
-        )
+        ssh = self._connect_ssh()
 
         stdin, stdout, stderr = ssh.exec_command(command)
         output = stdout.read().decode()
@@ -182,6 +192,7 @@ class ZenMLHostPod(Pod):
     def __init__(
             self,
             name: str = "zenml-host",
+            image_name: str = ImageNames.CPU,
             network_volume_id: str | None = "kh451m6un6",
     ):
         """
@@ -194,6 +205,7 @@ class ZenMLHostPod(Pod):
         """
         super().__init__(
             name=name,
+            image_name=image_name,
             network_volume_id=network_volume_id,
         )
 
@@ -217,3 +229,57 @@ class ZenMLHostPod(Pod):
 
         except Exception as e:
             logger.exception(f"Failed to start ZenML server: {e}")
+
+class FinetuningPod(Pod):
+    """Pod class to manage finetuning GPU pod."""
+
+    def __init__(
+            self,
+            gpu_type_id: str,
+            name: str = "voice-finetune",
+            template_id: str = TemplateIds.FINETUNE,
+            image_name: str = ImageNames.FINETUNE,
+            gpu_count: int = 1,
+    ):
+        """
+        Initialise finetuning pod.
+
+        Sends ssh credentials at startup.
+
+        :param gpu_type_id: id of the gpu to use
+        :param name: name of the pod
+        :param template_id: id of the template to use
+        :param gpu_count: number of gpus to use
+        """
+        super().__init__(
+            name=name,
+            template_id=template_id,
+            image_name=image_name,
+            gpu_type_id=gpu_type_id,
+            gpu_count=gpu_count,
+        )
+
+        self._send_ssh_credentials()
+
+    def _send_ssh_credentials(self) -> None:
+        """Send SSH private key to the pod."""
+        remote_path = "/root/.ssh/id_ed25519"
+        local_path = self.ssh_key_path
+
+        logger.info(f"Uploading SSH key from {local_path} to {remote_path}...")
+
+        ssh = self._connect_ssh()
+        sftp = ssh.open_sftp()
+
+        try:
+            sftp.mkdir("/root/.ssh", mode=0o700)
+        except IOError:
+            # Directory should exist anyway
+            pass
+
+        sftp.put(local_path, remote_path)
+        sftp.chmod(remote_path, 0o600)
+        sftp.close()
+        ssh.close()
+
+        logger.success("SSH key uploaded successfully to pod.")

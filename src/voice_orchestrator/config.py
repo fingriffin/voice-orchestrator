@@ -23,7 +23,7 @@ class FinetuneConfig(BaseModel):
     gradient_checkpointing: bool = Field(True, description="Use gradient checkpointing")
 
     optimizer: str = Field("paged_adamw_32bit", description="Optimizer to use")
-    gpu_type: Optional[str] = Field(None, description="GPU type (will be routed upward)")
+    gpu_type: str = Field("NVIDIA A40", description="GPU type (will be routed upward)")
     gpus: int = Field(1, description="Number of GPUs to use")
 
     epochs: int = Field(3, description="Number of training epochs")
@@ -66,7 +66,7 @@ class InferenceConfig(BaseModel):
     )
 
     split: str = Field("test", description="Dataset split to use for inference")
-    gpu_type: Optional[str] = Field(None, description="GPU type (will be routed upward)")
+    gpu_type: str = Field("NVIDIA A40", description="GPU type (will be routed upward)")
     gpus: int = Field(1, description="Number of GPUs to use")
     quantization: Optional[str] = Field(
         None, description="Quantization method (e.g. 4bit or 8bit)"
