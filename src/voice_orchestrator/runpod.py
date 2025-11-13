@@ -238,6 +238,8 @@ class FinetunePod(Pod):
             gpu_count=gpu_count,
         )
 
+        self._write_dotenv()
+
     def finetune(self, config_path: str) -> None:
         """
         Excecute finetuning command on the pod.
@@ -253,3 +255,29 @@ class FinetunePod(Pod):
             ]
         )
         self.execute(cmd, stream=True)
+
+    def _write_dotenv(self) -> None:
+        """
+        Write the exact contents of the local .env file into pod.
+
+        :return: None
+        """
+        local_env_path = ".env"
+        if not os.path.exists(local_env_path):
+            logger.error("Local .env file not found.")
+            return
+
+        # Read the local .env raw text
+        with open(local_env_path, "r") as f:
+            env_text = f.read()
+
+        safe_text = env_text.replace("'", "'\"'\"'")
+
+        # Build the command to write .env on the pod
+        cmd = (
+            "mkdir -p /app && "
+            f"printf '%s' '{safe_text}' > /app/.env && "
+            "chmod 600 /app/.env"
+        )
+
+        self.execute(cmd)
