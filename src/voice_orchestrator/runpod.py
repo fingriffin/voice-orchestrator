@@ -163,16 +163,43 @@ class Pod:
         )
         return ssh
 
-    def execute(self, command: str) -> str | None:
+    def execute(self, command: str, stream: bool = False) -> str | None:
         """
         Execute a command on the pod over SSH.
 
         :param command: command to execute
+        :param stream: stream the output of the command to terminal
         :return: output of the command or None if error occurs
         """
         ssh = self._connect_ssh()
 
-        stdin, stdout, stderr = ssh.exec_command(command)
+        stdin, stdout, stderr = ssh.exec_command(command, get_pty=stream)
+
+        if stream:
+            try:
+                # Stream stdout
+                while not stdout.channel.exit_status_ready():
+                    if stdout.channel.recv_ready():
+                        chunk = stdout.channel.recv(1024).decode()
+                        print(chunk, end="")  # stream to local terminal
+
+                # Read any remaining output
+                remainder = stdout.read().decode()
+                if remainder:
+                    print(remainder, end="")
+
+                # Check for errors
+                err = stderr.read().decode()
+                if err:
+                    print(err)
+                    logger.error(f"Command error: {err.strip()}")
+                    return None
+
+                return None
+
+            finally:
+                ssh.close()
+
         output = stdout.read().decode()
         error = stderr.read().decode()
 
@@ -182,7 +209,7 @@ class Pod:
             logger.error(f"Command error: {error.strip()}")
             return None
 
-        return str(output.strip())
+        return output.strip()
 
 class FinetunePod(Pod):
     """Pod class to manage finetuning GPU pod."""
@@ -225,4 +252,4 @@ class FinetunePod(Pod):
                 BashCommands.FINETUNE + f" {config_path}",
             ]
         )
-        self.execute(cmd)
+        self.execute(cmd, stream=True)
