@@ -12,7 +12,7 @@ import runpod
 from dotenv import load_dotenv
 from loguru import logger
 
-from voice_orchestrator.constants import ImageNames, ShellCommands, TemplateIds
+from voice_orchestrator.constants import BashCommands, ImageNames, TemplateIds
 from voice_orchestrator.logging import setup_logging
 
 
@@ -163,16 +163,69 @@ class Pod:
         )
         return ssh
 
-    def execute(self, command: str) -> str | None:
+    def _write_dotenv(self) -> None:
+        """
+        Write the exact contents of the local .env file into pod.
+
+        :return: None
+        """
+        local_env_path = ".env"
+        if not os.path.exists(local_env_path):
+            logger.error("Local .env file not found.")
+            return
+
+        # Read the local .env raw text
+        with open(local_env_path, "r") as f:
+            env_text = f.read()
+
+        safe_text = env_text.replace("'", "'\"'\"'")
+
+        # Build the command to write .env on the pod
+        cmd = (
+            "mkdir -p /app && "
+            f"printf '%s' '{safe_text}' > /app/.env && "
+            "chmod 600 /app/.env"
+        )
+
+        self.execute(cmd)
+
+    def execute(self, command: str, stream: bool = False) -> str | None:
         """
         Execute a command on the pod over SSH.
 
         :param command: command to execute
+        :param stream: stream the output of the command to terminal
         :return: output of the command or None if error occurs
         """
         ssh = self._connect_ssh()
 
-        stdin, stdout, stderr = ssh.exec_command(command)
+        stdin, stdout, stderr = ssh.exec_command(command, get_pty=stream)
+
+        if stream:
+            try:
+                # Stream stdout
+                while not stdout.channel.exit_status_ready():
+                    if stdout.channel.recv_ready():
+                        chunk = stdout.channel.recv(1024).decode()
+                        print(chunk, end="")  # stream to local terminal
+
+                # Read any remaining output
+                remainder = stdout.read().decode()
+                if remainder:
+                    print(remainder, end="")
+
+                # Check for errors
+                err = stderr.read().decode()
+                if err:
+                    print(err)
+                    logger.error(f"Command error: {err.strip()}")
+                    return None
+
+                return None
+
+            finally:
+                ssh.close()
+
         output = stdout.read().decode()
         error = stderr.read().decode()
 
@@ -182,55 +235,18 @@ class Pod:
             logger.error(f"Command error: {error.strip()}")
             return None
 
-        return str(output.strip())
+        return output.strip()
 
-
-
-class ZenMLHostPod(Pod):
-    """Pod class to manage ZenML host CPU pod."""
-
-    def __init__(
-            self,
-            name: str = "zenml-host",
-            image_name: str = ImageNames.CPU,
-            network_volume_id: str | None = "kh451m6un6",
-    ):
+    def kill(self) -> None:
         """
-        Initialise ZenMLHostPod class.
-
-        Starts ZenML server on the pod at startup.
-
-        :param name: name of the pod
-        :param network_volume_id: network volume id to mount to the pod
-        """
-        super().__init__(
-            name=name,
-            image_name=image_name,
-            network_volume_id=network_volume_id,
-        )
-
-        # Up zenml server
-        self._up_server()
-
-    def _up_server(self) -> None:
-        """
-        Start ZenML server on the pod.
+        Kill the pod.
 
         :return: None
         """
-        try:
-            logger.info("Starting ZenML server on pod...")
-            output = self.execute(
-                command=ShellCommands.ZENML_HOST_STARTUP
-            )
+        runpod.terminate_pod(self.id)
+        logger.info(f"Pod {self.name} killed.")
 
-            if output:
-                logger.success("ZenML server started successfully.")
-
-        except Exception as e:
-            logger.exception(f"Failed to start ZenML server: {e}")
-
-class FinetuningPod(Pod):
+class FinetunePod(Pod):
     """Pod class to manage finetuning GPU pod."""
 
     def __init__(
@@ -244,7 +260,50 @@ class FinetuningPod(Pod):
         """
         Initialise finetuning pod.
 
-        Sends ssh credentials at startup.
+        :param gpu_type_id: id of the gpu to use
+        :param name: name of the pod
+        :param template_id: id of the template to use
+        :param gpu_count: number of gpus to use
+        """
+        super().__init__(
+            name=name,
+            template_id=template_id,
+            image_name=image_name,
+            gpu_type_id=gpu_type_id,
+            gpu_count=gpu_count,
+        )
+
+        self._write_dotenv()
+
+    def finetune(self, config_path: str) -> None:
+        """
+        Excecute finetuning command on the pod.
+
+        :param config_path: path to finetune config file
+        :return: None
+        """
+        cmd = "&&".join(
+            [
+                BashCommands.GO_TO_APP,
+                BashCommands.ACTIVATE,
+                BashCommands.FINETUNE + f" {config_path}",
+            ]
+        )
+        self.execute(cmd, stream=True)
+
+class InferencePod(Pod):
+    """Pod class to manage inference GPU pod."""
+
+    def __init__(
+            self,
+            gpu_type_id: str,
+            name: str = "voice-inference",
+            template_id: str = TemplateIds.INFERENCE,
+            image_name: str = ImageNames.INFERENCE,
+            gpu_count: int = 1,
+    ):
+        """
+        Initialise inference pod.
 
         :param gpu_type_id: id of the gpu to use
         :param name: name of the pod
@@ -258,3 +317,21 @@ class FinetuningPod(Pod):
             gpu_type_id=gpu_type_id,
             gpu_count=gpu_count,
         )
+
+        self._write_dotenv()
+
+    def infer(self, config_path: str) -> None:
+        """
+        Excecute inference command on the pod.
+
+        :param config_path: path to finetune config file
+        :return: None
+        """
+        cmd = "&&".join(
+            [
+                BashCommands.GO_TO_APP,
+                BashCommands.ACTIVATE,
+                BashCommands.INFERENCE + f" {config_path}",
+            ]
+        )
+        self.execute(cmd, stream=True)

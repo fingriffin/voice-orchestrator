@@ -1,12 +1,15 @@
 """CLI to run VOICE orchestrator with a specified configuration."""
 
+
 import click
+from dotenv import load_dotenv
 from loguru import logger
 
 from voice_orchestrator.config import load_master_config
+from voice_orchestrator.constants import ConfigTypes
 from voice_orchestrator.logging import setup_logging
-from voice_orchestrator.runpod import FinetuningPod
-from voice_orchestrator.zenml import connect_to_zenml_server
+from voice_orchestrator.runpod import FinetunePod, InferencePod
+from voice_orchestrator.wandb import WandbRun
 
 
 @click.command()
@@ -27,6 +30,7 @@ def main(
     :return: None
     """
     # Setup logging
+    load_dotenv()
     setup_logging(level=log_level, log_file=log_file)
 
     # Load config
@@ -41,12 +45,39 @@ def main(
         logger.error("Failed to load config: {}", e)
         raise
 
-    # Connect to ZenML server
-    client = connect_to_zenml_server()
 
-    _ = client  # Placeholder for linter
+    # Prepare wandb run
+    run = WandbRun(config=config, config_path=config_path)
+
+    # Log config artifacts (including sub-configs) to wandb
+    run.log_config_artifacts()
 
     # Spin up finetuning pod
-    finetuning_pod = FinetuningPod(gpu_type_id=config.gpu_type_finetune) # type: ignore[arg-type]
+    finetune_pod = FinetunePod(
+        gpu_type_id=config.gpu_type_finetune, # type: ignore[arg-type]
+        gpu_count=config.finetune.gpus,
+    )
 
-    __ = finetuning_pod # Placeholder for linter
+    # Run finetuning job with saved finetune config artifact
+    finetune_config_uri = run.get_config_uri(
+        config_type=ConfigTypes.SUB_CONFIGS["finetune"]
+    )
+    finetune_pod.finetune(finetune_config_uri)
+
+    finetune_pod.kill()
+
+    # Spin up inference pod
+    inference_pod = InferencePod(
+        gpu_type_id=config.gpu_type_inference, # type: ignore[arg-type]
+        gpu_count=config.inference.gpus,
+    )
+
+    # Run inference job with saved inference config artifact
+    inference_config_uri = run.get_config_uri(
+        config_type=ConfigTypes.SUB_CONFIGS["inference"]
+    )
+    inference_pod.infer(inference_config_uri)
+
+    inference_pod.kill()
+
+    run.finish()

@@ -1,15 +1,12 @@
 """Constants for the VOICE orchestration."""
 
-class ShellCommands:
-    """Shell commands used on RunPod instances."""
+class BashCommands:
+    """Bash commands used in VOICE orchestration."""
 
-    ZENML_HOST_STARTUP = (
-        'export PATH="/runpod-volume/.local/bin:$PATH" && '
-        'export ZENML_CONFIG_PATH="/runpod-volume/.config/zenml" &&'
-        'cd /runpod-volume && '
-        'source .venv/bin/activate && '
-        'zenml up'
-    )
+    GO_TO_APP = "cd .. && cd app"
+    ACTIVATE = "source .venv/bin/activate"
+    FINETUNE = "finetune"
+    INFERENCE = "infer"
 
 class TemplateIds:
     """RunPod template IDs."""
@@ -20,5 +17,14 @@ class TemplateIds:
 class ImageNames:
     """RunPod image names."""
 
-    CPU = "runpod/base:0.7.0-ubuntu2404"
     FINETUNE = "ghcr.io/fingriffin/voice-finetune:latest" # Private
+    INFERENCE = "ghcr.io/fingriffin/voice-finetune:latest" # Private
+
+class ConfigTypes:
+    """Config types for experiment tracking."""
+
+    MASTER_CONFIG = "MasterConfig"
+    SUB_CONFIGS = {
+        "finetune": "FinetuneConfig",
+        "inference": "InferenceConfig",
+    }
