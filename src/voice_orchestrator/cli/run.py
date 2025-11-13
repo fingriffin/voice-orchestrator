@@ -8,7 +8,7 @@ from loguru import logger
 from voice_orchestrator.config import load_master_config
 from voice_orchestrator.constants import ConfigTypes
 from voice_orchestrator.logging import setup_logging
-from voice_orchestrator.runpod import FinetunePod
+from voice_orchestrator.runpod import FinetunePod, InferencePod
 from voice_orchestrator.wandb import WandbRun
 
 
@@ -64,7 +64,20 @@ def main(
     )
     finetune_pod.finetune(finetune_config_uri)
 
-    # Spin up inference pod, download config from wandb, run inference job
-    # Think about what to do with outputs and evals
+    finetune_pod.kill()
 
-    run.run.finish()
+    # Spin up inference pod
+    inference_pod = InferencePod(
+        gpu_type_id=config.gpu_type_inference, # type: ignore[arg-type]
+        gpu_count=config.inference.gpus,
+    )
+
+    # Run inference job with saved inference config artifact
+    inference_config_uri = run.get_config_uri(
+        config_type=ConfigTypes.SUB_CONFIGS["inference"]
+    )
+    inference_pod.infer(inference_config_uri)
+
+    inference_pod.kill()
+
+    run.finish()

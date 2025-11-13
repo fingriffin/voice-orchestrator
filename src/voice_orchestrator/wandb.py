@@ -107,3 +107,11 @@ class WandbRun:
                 f"{self.name}-{config_type}:v0",
             ]
         )
+
+    def finish(self) -> None:
+        """
+        End the wandb run.
+
+        :return: None
+        """
+        self.run.finish()

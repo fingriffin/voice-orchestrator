@@ -163,6 +163,32 @@ class Pod:
         )
         return ssh
 
+    def _write_dotenv(self) -> None:
+        """
+        Write the exact contents of the local .env file into pod.
+
+        :return: None
+        """
+        local_env_path = ".env"
+        if not os.path.exists(local_env_path):
+            logger.error("Local .env file not found.")
+            return
+
+        # Read the local .env raw text
+        with open(local_env_path, "r") as f:
+            env_text = f.read()
+
+        safe_text = env_text.replace("'", "'\"'\"'")
+
+        # Build the command to write .env on the pod
+        cmd = (
+            "mkdir -p /app && "
+            f"printf '%s' '{safe_text}' > /app/.env && "
+            "chmod 600 /app/.env"
+        )
+
+        self.execute(cmd)
+
     def execute(self, command: str, stream: bool = False) -> str | None:
         """
         Execute a command on the pod over SSH.
@@ -211,6 +237,15 @@ class Pod:
 
         return output.strip()
 
+    def kill(self) -> None:
+        """
+        Kill the pod.
+
+        :return: None
+        """
+        runpod.terminate_pod(self.id)
+        logger.info(f"Pod {self.name} killed.")
+
 class FinetunePod(Pod):
     """Pod class to manage finetuning GPU pod."""
 
@@ -256,28 +291,47 @@ class FinetunePod(Pod):
         )
         self.execute(cmd, stream=True)
 
-    def _write_dotenv(self) -> None:
+class InferencePod(Pod):
+    """Pod class to manage inference GPU pod."""
+
+    def __init__(
+            self,
+            gpu_type_id: str,
+            name: str = "voice-inference",
+            template_id: str = TemplateIds.INFERENCE,
+            image_name: str = ImageNames.INFERENCE,
+            gpu_count: int = 1,
+    ):
         """
-        Write the exact contents of the local .env file into pod.
+        Initialise inference pod.
 
-        :return: None
+        :param gpu_type_id: id of the gpu to use
+        :param name: name of the pod
+        :param template_id: id of the template to use
+        :param gpu_count: number of gpus to use
         """
-        local_env_path = ".env"
-        if not os.path.exists(local_env_path):
-            logger.error("Local .env file not found.")
-            return
-
-        # Read the local .env raw text
-        with open(local_env_path, "r") as f:
-            env_text = f.read()
-
-        safe_text = env_text.replace("'", "'\"'\"'")
-
-        # Build the command to write .env on the pod
-        cmd = (
-            "mkdir -p /app && "
-            f"printf '%s' '{safe_text}' > /app/.env && "
-            "chmod 600 /app/.env"
+        super().__init__(
+            name=name,
+            template_id=template_id,
+            image_name=image_name,
+            gpu_type_id=gpu_type_id,
+            gpu_count=gpu_count,
         )
 
-        self.execute(cmd)
+        self._write_dotenv()
+
+    def infer(self, config_path: str) -> None:
+        """
+        Excecute inference command on the pod.
+
+        :param config_path: path to finetune config file
+        :return: None
+        """
+        cmd = "&&".join(
+            [
+                BashCommands.GO_TO_APP,
+                BashCommands.ACTIVATE,
+                BashCommands.INFERENCE + f" {config_path}",
+            ]
+        )
+        self.execute(cmd, stream=True)

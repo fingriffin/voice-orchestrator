@@ -6,6 +6,7 @@ class BashCommands:
     GO_TO_APP = "cd .. && cd app"
     ACTIVATE = "source .venv/bin/activate"
     FINETUNE = "finetune"
+    INFERENCE = "infer"
 
 class TemplateIds:
     """RunPod template IDs."""
@@ -17,6 +18,7 @@ class ImageNames:
     """RunPod image names."""
 
     FINETUNE = "ghcr.io/fingriffin/voice-finetune:latest" # Private
+    INFERENCE = "ghcr.io/fingriffin/voice-finetune:latest" # Private
 
 class ConfigTypes:
     """Config types for experiment tracking."""
