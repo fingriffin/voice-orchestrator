@@ -6,7 +6,9 @@ from dotenv import load_dotenv
 from loguru import logger
 
 from voice_orchestrator.config import load_master_config
+from voice_orchestrator.constants import ConfigTypes
 from voice_orchestrator.logging import setup_logging
+from voice_orchestrator.runpod import FinetunePod
 from voice_orchestrator.wandb import WandbRun
 
 
@@ -51,8 +53,17 @@ def main(
     run.log_config_artifacts()
 
     # Spin up finetuning pod
+    finetune_pod = FinetunePod(
+        gpu_type_id=config.gpu_type_finetune, # type: ignore[arg-type]
+        gpu_count=config.finetune.gpus,
+    )
 
-    # Spin up finetuning pod, download config from wandb, run finetuning job
+    # Run finetuning job with saved finetune config artifact
+    finetune_config_uri = run.get_config_uri(
+        config_type=ConfigTypes.SUB_CONFIGS["finetune"]
+    )
+    finetune_pod.finetune(finetune_config_uri)
+
     # Spin up inference pod, download config from wandb, run inference job
     # Think about what to do with outputs and evals
 

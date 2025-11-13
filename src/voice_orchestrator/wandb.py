@@ -92,3 +92,18 @@ class WandbRun:
         )
         artifact.add_file(path, name=artifact_name + ".yaml")
         self.run.log_artifact(artifact).wait()
+
+    def get_config_uri(self, config_type: str) -> str:
+        """
+        Get the wandb URI for a logged config artifact.
+
+        :param config_type: config type stylized e.g. "InferenceConfig"
+        :return: wandb URI string
+        """
+        return "/".join(
+            [
+                os.getenv("WANDB_ENTITY"), # type: ignore[list-item]
+                os.getenv("WANDB_PROJECT"), # type: ignore[list-item]
+                f"{self.name}-{config_type}:v0",
+            ]
+        )

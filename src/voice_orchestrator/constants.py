@@ -1,5 +1,12 @@
 """Constants for the VOICE orchestration."""
 
+class BashCommands:
+    """Bash commands used in VOICE orchestration."""
+
+    GO_TO_APP = "cd .. && cd app"
+    ACTIVATE = "source .venv/bin/activate"
+    FINETUNE = "finetune"
+
 class TemplateIds:
     """RunPod template IDs."""
 

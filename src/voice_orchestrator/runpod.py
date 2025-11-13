@@ -12,7 +12,7 @@ import runpod
 from dotenv import load_dotenv
 from loguru import logger
 
-from voice_orchestrator.constants import ImageNames, TemplateIds
+from voice_orchestrator.constants import BashCommands, ImageNames, TemplateIds
 from voice_orchestrator.logging import setup_logging
 
 
@@ -184,7 +184,7 @@ class Pod:
 
         return str(output.strip())
 
-class FinetuningPod(Pod):
+class FinetunePod(Pod):
     """Pod class to manage finetuning GPU pod."""
 
     def __init__(
@@ -198,8 +198,6 @@ class FinetuningPod(Pod):
         """
         Initialise finetuning pod.
 
-        Sends ssh credentials at startup.
-
         :param gpu_type_id: id of the gpu to use
         :param name: name of the pod
         :param template_id: id of the template to use
@@ -212,3 +210,19 @@ class FinetuningPod(Pod):
             gpu_type_id=gpu_type_id,
             gpu_count=gpu_count,
         )
+
+    def finetune(self, config_path: str) -> None:
+        """
+        Excecute finetuning command on the pod.
+
+        :param config_path: path to finetune config file
+        :return: None
+        """
+        cmd = "&&".join(
+            [
+                BashCommands.GO_TO_APP,
+                BashCommands.ACTIVATE,
+                BashCommands.FINETUNE + f" {config_path}",
+            ]
+        )
+        self.execute(cmd)
