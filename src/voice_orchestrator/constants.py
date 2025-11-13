@@ -10,3 +10,12 @@ class ImageNames:
     """RunPod image names."""
 
     FINETUNE = "ghcr.io/fingriffin/voice-finetune:latest" # Private
+
+class ConfigTypes:
+    """Config types for experiment tracking."""
+
+    MASTER_CONFIG = "MasterConfig"
+    SUB_CONFIGS = {
+        "finetune": "FinetuneConfig",
+        "inference": "InferenceConfig",
+    }

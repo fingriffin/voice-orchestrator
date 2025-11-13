@@ -1,15 +1,13 @@
 """CLI to run VOICE orchestrator with a specified configuration."""
 
-import os
-from datetime import datetime
 
 import click
-import wandb
 from dotenv import load_dotenv
 from loguru import logger
 
-from voice_orchestrator.config import load_master_config, load_wandb_config
+from voice_orchestrator.config import load_master_config
 from voice_orchestrator.logging import setup_logging
+from voice_orchestrator.wandb import WandbRun
 
 
 @click.command()
@@ -45,27 +43,17 @@ def main(
         logger.error("Failed to load config: {}", e)
         raise
 
+
     # Prepare wandb run
-    os.environ["WANDB_DIR"] = "/tmp" # Avoid flooding repo with wandb runs
-    timestamp = datetime.now().strftime("%H-%M-%d-%m-%y")
-    name = config.name + "-" + timestamp
-    wandb_config = load_wandb_config(config_path)
+    run = WandbRun(config=config, config_path=config_path)
 
-    # Start wandb run
-    wandb_run = wandb.init(
-        project=os.getenv("WANDB_PROJECT"),
-        entity=os.getenv("WANDB_ENTITY"),
-        name=name,
-        config=wandb_config,
-    )
+    # Log config artifacts (including sub-configs) to wandb
+    run.log_config_artifacts()
 
-    # Log config file as artifact for reproducibility
-    cfg_artifact = wandb.Artifact(
-        name=f"{name}_config",
-        type="MasterConfig",
-        description="YAML config used for this run"
-    )
-    cfg_artifact.add_file(config_path)
-    wandb_run.log_artifact(cfg_artifact).wait()
+    # Spin up finetuning pod
 
-    wandb_run.finish()
+    # Spin up finetuning pod, download config from wandb, run finetuning job
+    # Spin up inference pod, download config from wandb, run inference job
+    # Think about what to do with outputs and evals
+
+    run.run.finish()
