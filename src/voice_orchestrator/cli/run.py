@@ -8,7 +8,7 @@ from loguru import logger
 from voice_orchestrator.config import load_master_config
 from voice_orchestrator.constants import ConfigTypes
 from voice_orchestrator.logging import setup_logging
-from voice_orchestrator.runpod import FinetunePod, InferencePod
+from voice_orchestrator.runpod import FinetunePod, InferencePod, Pod
 from voice_orchestrator.wandb import WandbRun
 
 
@@ -32,6 +32,9 @@ def main(
     # Setup logging
     load_dotenv()
     setup_logging(level=log_level, log_file=log_file)
+
+    # Get user SSH
+    Pod._get_user_ssh()
 
     # Load config
     try:
