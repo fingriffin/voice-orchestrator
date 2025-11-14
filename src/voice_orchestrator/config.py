@@ -94,8 +94,8 @@ class MasterConfig(BaseModel):
     gpu_type_finetune: Optional[str] = Field(None, description="GPU type for finetuning")
     gpu_type_inference: Optional[str] = Field(None, description="GPU type for inference")
 
-    volume_in_gb_finetune: Optional[int] = Field(50, description="Volume for finetuning")
-    volume_in_gb_inference: Optional[int] = Field(50, description="Volume for inference")
+    volume_in_gb_finetune: int = Field(50, description="Volume for finetuning")
+    volume_in_gb_inference: int = Field(50, description="Volume for inference")
 
     finetune: FinetuneConfig
     inference: InferenceConfig
