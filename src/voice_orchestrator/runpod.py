@@ -19,6 +19,11 @@ from voice_orchestrator.logging import setup_logging
 class Pod:
     """Pod class to execute commands via SSH."""
 
+    # Class variables
+    _ssh_user: str | None = None
+    _ssh_key_path: str | None = None
+    _ssh_passphrase: str | None = None
+
     def __init__(
             self,
             name: str,
@@ -57,7 +62,7 @@ class Pod:
         self.api_key = os.getenv("RUNPOD_API_KEY")
         runpod.api_key = self.api_key
 
-        self._get_user_ssh() # TODO: Make this a class level method?
+        self._get_user_ssh()
 
         # Check if pod exists (unique by name)
         self.pods: list[dict] = []
@@ -92,13 +97,33 @@ class Pod:
 
             self._wait_for_pod()
 
-    def _get_user_ssh(self) -> None:
-        """Retrieve user SSH info."""
+    @classmethod
+    def _get_user_ssh(cls) -> None:
+        """
+        Retrieve user SSH info or get from class cache.
+
+        :return: None
+        """
+        if (
+                Pod._ssh_user
+                and Pod._ssh_key_path
+                and Pod._ssh_passphrase
+        ):
+            return
+
+        # Load defaults
         ssh_key_path = os.getenv("RUNPOD_SSH_KEY_PATH", "~/.ssh/id_ed25519")
-        self.ssh_key_path = os.path.expanduser(ssh_key_path)
-        self.ssh_user = os.getenv("RUNPOD_SSH_USER", "root")
-        msg = f"Enter passphrase for key {self.ssh_key_path}: "
-        self.passphrase = getpass.getpass(msg)
+        ssh_key_path = os.path.expanduser(ssh_key_path)
+        ssh_user = os.getenv("RUNPOD_SSH_USER", "root")
+
+        # Prompt user
+        msg = f"Enter passphrase for key {ssh_key_path}: "
+        passphrase = getpass.getpass(msg)
+
+        # Store on Pod class (not cls) to guarantee shared state
+        Pod._ssh_user = ssh_user
+        Pod._ssh_key_path = ssh_key_path
+        Pod._ssh_passphrase = passphrase
 
     def _pod_exists(self) -> bool:
         """Check if a pod with the given name already exists."""
@@ -157,9 +182,9 @@ class Pod:
         ssh.connect(
             hostname=self.public_ip,  # type: ignore[arg-type]
             port=self.port,  # type: ignore[arg-type]
-            username=self.ssh_user,
-            key_filename=self.ssh_key_path,
-            passphrase=self.passphrase,
+            username=Pod._ssh_user,
+            key_filename=Pod._ssh_key_path,
+            passphrase=Pod._ssh_passphrase,
         )
         return ssh
 
@@ -322,7 +347,7 @@ class InferencePod(Pod):
 
     def infer(self, config_path: str) -> None:
         """
-        Excecute inference command on the pod.
+        Execute inference command on the pod.
 
         :param config_path: path to finetune config file
         :return: None
