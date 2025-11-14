@@ -29,6 +29,7 @@ class Pod:
             name: str,
             template_id: str | None = None,
             image_name: str = "runpod/base:0.7.0-ubuntu2404",
+            volume_in_gb: int = 50,
             gpu_type_id: str | None = None,
             gpu_count: int | None = None,
             network_volume_id: str | None = None,
@@ -52,6 +53,7 @@ class Pod:
         self.name = name
         self.template_id = template_id
         self.image_name = image_name
+        self.volume_in_gb = volume_in_gb
         self.support_public_ip = True
         self.start_ssh = True
         self.gpu_type_id = gpu_type_id
@@ -85,6 +87,7 @@ class Pod:
                     name=self.name,
                     template_id=self.template_id,
                     image_name=self.image_name,
+                    volume_in_gb=self.volume_in_gb,
                     support_public_ip=self.support_public_ip,
                     start_ssh=self.start_ssh,
                     gpu_type_id=self.gpu_type_id,
@@ -280,6 +283,7 @@ class FinetunePod(Pod):
             name: str = "voice-finetune",
             template_id: str = TemplateIds.FINETUNE,
             image_name: str = ImageNames.FINETUNE,
+            volume_in_gb: int = 50,
             gpu_count: int = 1,
     ):
         """
@@ -294,6 +298,7 @@ class FinetunePod(Pod):
             name=name,
             template_id=template_id,
             image_name=image_name,
+            volume_in_gb=volume_in_gb,
             gpu_type_id=gpu_type_id,
             gpu_count=gpu_count,
         )
@@ -325,6 +330,7 @@ class InferencePod(Pod):
             name: str = "voice-inference",
             template_id: str = TemplateIds.INFERENCE,
             image_name: str = ImageNames.INFERENCE,
+            volume_in_gb: int = 50,
             gpu_count: int = 1,
     ):
         """
@@ -339,6 +345,7 @@ class InferencePod(Pod):
             name=name,
             template_id=template_id,
             image_name=image_name,
+            volume_in_gb=volume_in_gb,
             gpu_type_id=gpu_type_id,
             gpu_count=gpu_count,
         )

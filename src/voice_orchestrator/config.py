@@ -25,6 +25,7 @@ class FinetuneConfig(BaseModel):
     optimizer: str = Field("paged_adamw_32bit", description="Optimizer to use")
     gpu_type: str = Field("NVIDIA A40", description="GPU type (will be routed upward)")
     gpus: int = Field(1, description="Number of GPUs to use")
+    volume_in_gb: int = Field(50, description="Volume size in GB (will be routed upward)")
 
     epochs: int = Field(3, description="Number of training epochs")
     micro_batch_size: int = Field(2, description="Micro batch size")
@@ -68,6 +69,7 @@ class InferenceConfig(BaseModel):
     split: str = Field("test", description="Dataset split to use for inference")
     gpu_type: str = Field("NVIDIA A40", description="GPU type (will be routed upward)")
     gpus: int = Field(1, description="Number of GPUs to use")
+    volume_in_gb: int = Field(50, description="Volume size in GB (will be routed upward)")
     quantization: Optional[str] = Field(
         None, description="Quantization method (e.g. 4bit or 8bit)"
     )
@@ -92,6 +94,9 @@ class MasterConfig(BaseModel):
     gpu_type_finetune: Optional[str] = Field(None, description="GPU type for finetuning")
     gpu_type_inference: Optional[str] = Field(None, description="GPU type for inference")
 
+    volume_in_gb_finetune: Optional[int] = Field(50, description="Volume for finetuning")
+    volume_in_gb_inference: Optional[int] = Field(50, description="Volume for inference")
+
     finetune: FinetuneConfig
     inference: InferenceConfig
 
@@ -113,6 +118,14 @@ class MasterConfig(BaseModel):
         if getattr(inference, "gpu_type", None):
             values.gpu_type_inference = inference.gpu_type
             delattr(inference, "gpu_type")
+
+        if getattr(finetune, "volume_in_gb", None):
+            values.volume_in_gb_finetune = finetune.volume_in_gb
+            delattr(finetune, "volume_in_gb")
+
+        if getattr(inference, "volume_in_gb", None):
+            values.volume_in_gb_inference = inference.volume_in_gb
+            delattr(inference, "volume_in_gb")
 
         finetune.model_name = base_model
         finetune.train_data_path = data_path
