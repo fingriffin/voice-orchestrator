@@ -26,6 +26,7 @@ class WandbRun:
         self.config_path = config_path
         self.name: str = ""
         self.run: Run
+        self.id: str = ""
 
         self._prepare_run()
 
@@ -51,6 +52,8 @@ class WandbRun:
             name=self.name,
             config=wandb_config,
         )
+
+        self.id = self.run.id
 
     def log_config_artifacts(self) -> None:
         """

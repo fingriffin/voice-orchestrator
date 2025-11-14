@@ -66,7 +66,10 @@ def main(
     finetune_config_uri = run.get_config_uri(
         config_type=ConfigTypes.SUB_CONFIGS["finetune"]
     )
-    finetune_pod.finetune(finetune_config_uri)
+    finetune_pod.finetune(
+        config_path=finetune_config_uri,
+        wandb_run_id=run.id,
+    )
 
     finetune_pod.kill()
 

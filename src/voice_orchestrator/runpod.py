@@ -305,18 +305,23 @@ class FinetunePod(Pod):
 
         self._write_dotenv()
 
-    def finetune(self, config_path: str) -> None:
+    def finetune(self, config_path: str, wandb_run_id: str) -> None:
         """
         Excecute finetuning command on the pod.
 
         :param config_path: path to finetune config file
+        :param wandb_run_id: wandb run id to log to
         :return: None
         """
         cmd = "&&".join(
             [
                 BashCommands.GO_TO_APP,
                 BashCommands.ACTIVATE,
-                BashCommands.FINETUNE + f" {config_path}",
+                (
+                        BashCommands.FINETUNE
+                        + f" {config_path}"
+                        + f" --wandb_run_id={wandb_run_id}"
+                ),
             ]
         )
         self.execute(cmd, stream=True)
