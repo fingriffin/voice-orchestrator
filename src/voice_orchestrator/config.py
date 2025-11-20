@@ -2,6 +2,8 @@
 
 from pathlib import Path
 from typing import Any, Optional
+import os
+from dotenv import load_dotenv
 
 import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -26,6 +28,7 @@ class FinetuneConfig(BaseModel):
     gpu_type: str = Field("NVIDIA A40", description="GPU type (will be routed upward)")
     gpus: int = Field(1, description="Number of GPUs to use")
     volume_in_gb: int = Field(50, description="Volume size in GB (will be routed upward)")
+    container_disk_in_gb: int = Field(50, description="Container size in GB (will be routed upward)")
 
     epochs: int = Field(3, description="Number of training epochs")
     micro_batch_size: int = Field(2, description="Micro batch size")
@@ -70,6 +73,7 @@ class InferenceConfig(BaseModel):
     gpu_type: str = Field("NVIDIA A40", description="GPU type (will be routed upward)")
     gpus: int = Field(1, description="Number of GPUs to use")
     volume_in_gb: int = Field(50, description="Volume size in GB (will be routed upward)")
+    container_disk_in_gb: int = Field(50, description="Container size in GB (will be routed upward)")
     quantization: Optional[str] = Field(
         None, description="Quantization method (e.g. 4bit or 8bit)"
     )
@@ -97,16 +101,22 @@ class MasterConfig(BaseModel):
     volume_in_gb_finetune: int = Field(50, description="Volume for finetuning")
     volume_in_gb_inference: int = Field(50, description="Volume for inference")
 
+    container_disk_in_gb_finetune: int = Field(50, description="Container disk for finetuning")
+    container_disk_in_gb_inference: int = Field(50, description="Container disk for inference")
+
     finetune: FinetuneConfig
     inference: InferenceConfig
 
     @model_validator(mode="after")
     def route_shared_fields(cls, values: "MasterConfig") -> "MasterConfig":
         """Route shared fields between finetuning and inference configurations."""
+        load_dotenv()
+        hf_org = os.getenv("HF_ORG")
+
         base_model = values.base_model
         data_path = values.data_path
         name = values.name
-        merged_name = name + "-Merged"
+        merged_name = f"{hf_org}/" + name + "-Merged"
 
         finetune = values.finetune
         inference = values.inference
@@ -126,6 +136,14 @@ class MasterConfig(BaseModel):
         if getattr(inference, "volume_in_gb", None):
             values.volume_in_gb_inference = inference.volume_in_gb
             delattr(inference, "volume_in_gb")
+
+        if getattr(finetune, "container_disk_in_gb", None):
+            values.container_disk_in_gb_finetune = finetune.container_disk_in_gb
+            delattr(finetune, "container_disk_in_gb")
+
+        if getattr(inference, "container_disk_in_gb", None):
+            values.container_disk_in_gb_inference = inference.container_disk_in_gb
+            delattr(inference, "container_disk_in_gb")
 
         finetune.model_name = base_model
         finetune.train_data_path = data_path

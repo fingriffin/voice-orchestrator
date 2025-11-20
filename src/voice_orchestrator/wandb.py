@@ -70,7 +70,7 @@ class WandbRun:
         )
         # Log sub-configs as artifacts
         for sub in ConfigTypes.SUB_CONFIGS.keys():
-            config_dict = getattr(self.config, sub).model_dump()
+            config_dict = getattr(self.config, sub).model_dump(exclude_none=True)
 
             with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as fp:
                 yaml.dump(config_dict, fp)

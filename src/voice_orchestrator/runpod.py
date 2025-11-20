@@ -4,6 +4,7 @@ import contextlib
 import getpass
 import io
 import os
+import codecs
 import time
 
 import paramiko
@@ -14,6 +15,24 @@ from loguru import logger
 
 from voice_orchestrator.constants import BashCommands, ImageNames, TemplateIds
 from voice_orchestrator.logging import setup_logging
+
+def safe_get_pods(retries=5, delay=5) -> dict:
+    """
+    Patched runpod.get_pods to avoid JSON decode errors.
+
+    Running runpod.get_pods too quickly after killing a pod causing this issue.
+
+    :param retries: number of retries before failing
+    :param delay: delay between retries in seconds
+    :raises requests.exceptions.JSONDecodeError: if all retries fail
+    :return: JSON response from runpod.get_pods
+    """
+    for _ in range(retries):
+        try:
+            return runpod.get_pods()
+        except requests.exceptions.JSONDecodeError:
+            time.sleep(delay)
+    raise
 
 
 class Pod:
@@ -30,6 +49,7 @@ class Pod:
             template_id: str | None = None,
             image_name: str = "runpod/base:0.7.0-ubuntu2404",
             volume_in_gb: int = 50,
+            container_disk_in_gb: int = 50,
             gpu_type_id: str | None = None,
             gpu_count: int | None = None,
             network_volume_id: str | None = None,
@@ -54,6 +74,7 @@ class Pod:
         self.template_id = template_id
         self.image_name = image_name
         self.volume_in_gb = volume_in_gb
+        self.container_disk_in_gb = container_disk_in_gb
         self.support_public_ip = True
         self.start_ssh = True
         self.gpu_type_id = gpu_type_id
@@ -88,6 +109,7 @@ class Pod:
                     template_id=self.template_id,
                     image_name=self.image_name,
                     volume_in_gb=self.volume_in_gb,
+                    container_disk_in_gb=self.container_disk_in_gb,
                     support_public_ip=self.support_public_ip,
                     start_ssh=self.start_ssh,
                     gpu_type_id=self.gpu_type_id,
@@ -130,7 +152,7 @@ class Pod:
 
     def _pod_exists(self) -> bool:
         """Check if a pod with the given name already exists."""
-        self.pods = runpod.get_pods()
+        self.pods = safe_get_pods()
         if not self.pods:
             return False
         else:
@@ -231,22 +253,27 @@ class Pod:
 
         if stream:
             try:
-                # Stream stdout
+                decoder = codecs.getincrementaldecoder("utf-8")(errors="ignore")
+
                 while not stdout.channel.exit_status_ready():
                     if stdout.channel.recv_ready():
-                        chunk = stdout.channel.recv(1024).decode()
-                        print(chunk, end="")  # stream to local terminal
+                        raw = stdout.channel.recv(1024)
+                        text = decoder.decode(raw)
+                        print(text, end="")
 
-                # Read any remaining output
-                remainder = stdout.read().decode()
+                final_text = decoder.decode(b"", final=True)
+                if final_text:
+                    print(final_text, end="")
+
+                remainder = stdout.read()
                 if remainder:
-                    print(remainder, end="")
+                    print(decoder.decode(remainder, final=True), end="")
 
-                # Check for errors
-                err = stderr.read().decode()
-                if err:
-                    print(err)
-                    logger.error(f"Command error: {err.strip()}")
+                err_bytes = stderr.read()
+                if err_bytes:
+                    err_text = decoder.decode(err_bytes, final=True)
+                    print(err_text)
+                    logger.error(f"Command error: {err_text.strip()}")
                     return None
 
                 return None
@@ -284,6 +311,7 @@ class FinetunePod(Pod):
             template_id: str = TemplateIds.FINETUNE,
             image_name: str = ImageNames.FINETUNE,
             volume_in_gb: int = 50,
+            container_disk_in_gb: int = 50,
             gpu_count: int = 1,
     ):
         """
@@ -299,6 +327,7 @@ class FinetunePod(Pod):
             template_id=template_id,
             image_name=image_name,
             volume_in_gb=volume_in_gb,
+            container_disk_in_gb=container_disk_in_gb,
             gpu_type_id=gpu_type_id,
             gpu_count=gpu_count,
         )
@@ -320,7 +349,7 @@ class FinetunePod(Pod):
                 (
                         BashCommands.FINETUNE
                         + f" {config_path}"
-                        + f" --wandb_run_id={wandb_run_id}"
+                        + f" --wandb-run-id={wandb_run_id}"
                 ),
             ]
         )
@@ -336,6 +365,7 @@ class InferencePod(Pod):
             template_id: str = TemplateIds.INFERENCE,
             image_name: str = ImageNames.INFERENCE,
             volume_in_gb: int = 50,
+            container_disk_in_gb: int = 50,
             gpu_count: int = 1,
     ):
         """
@@ -351,24 +381,30 @@ class InferencePod(Pod):
             template_id=template_id,
             image_name=image_name,
             volume_in_gb=volume_in_gb,
+            container_disk_in_gb=container_disk_in_gb,
             gpu_type_id=gpu_type_id,
             gpu_count=gpu_count,
         )
 
         self._write_dotenv()
 
-    def infer(self, config_path: str) -> None:
+    def infer(self, config_path: str, wandb_run_id: str) -> None:
         """
         Execute inference command on the pod.
 
         :param config_path: path to finetune config file
+        :param wandb_run_id: wandb run id to log to
         :return: None
         """
         cmd = "&&".join(
             [
                 BashCommands.GO_TO_APP,
                 BashCommands.ACTIVATE,
-                BashCommands.INFERENCE + f" {config_path}",
+                (
+                        BashCommands.INFERENCE
+                        + f" {config_path}"
+                        + f" --wandb-run-id={wandb_run_id}"
+                ),
             ]
         )
         self.execute(cmd, stream=True)

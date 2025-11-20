@@ -55,6 +55,9 @@ def main(
     # Log config artifacts (including sub-configs) to wandb
     run.log_config_artifacts()
 
+    # End run to be continued via finetuning and inference pods
+    run.finish()
+
     # Spin up finetuning pod
     finetune_pod = FinetunePod(
         gpu_type_id=config.gpu_type_finetune, # type: ignore[arg-type]
@@ -84,8 +87,9 @@ def main(
     inference_config_uri = run.get_config_uri(
         config_type=ConfigTypes.SUB_CONFIGS["inference"]
     )
-    inference_pod.infer(inference_config_uri)
+    inference_pod.infer(
+        config_path=inference_config_uri,
+        wandb_run_id=run.id,
+    )
 
     inference_pod.kill()
-
-    run.finish()

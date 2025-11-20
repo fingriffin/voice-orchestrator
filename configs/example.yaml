@@ -49,4 +49,4 @@ inference:
   volume_in_gb: 50 # Volume size in GB for each GPU
   max_tokens: 2048 # Maximum number of tokens for generation
 
-  output_file: # Local path to save the output predictions
+  output_file: # Local json file name to save the output too (e.g. output.json)
