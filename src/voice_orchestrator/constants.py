@@ -28,3 +28,8 @@ class ConfigTypes:
         "finetune": "FinetuneConfig",
         "inference": "InferenceConfig",
     }
+
+class Misc:
+    """Miscellaneous constants."""
+
+    SSH_TCP_PORT = "22/tcp" # Runpod SSH port with TCP protocol

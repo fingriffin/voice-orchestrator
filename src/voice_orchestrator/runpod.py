@@ -1,11 +1,12 @@
 """Wrapper for runpod-python to manage pods and execute commands via SSH."""
 
+import codecs
 import contextlib
 import getpass
 import io
 import os
-import codecs
 import time
+from typing import Any
 
 import paramiko
 import requests
@@ -13,10 +14,11 @@ import runpod
 from dotenv import load_dotenv
 from loguru import logger
 
-from voice_orchestrator.constants import BashCommands, ImageNames, TemplateIds
+from voice_orchestrator.constants import BashCommands, ImageNames, Misc, TemplateIds
 from voice_orchestrator.logging import setup_logging
 
-def safe_get_pods(retries=5, delay=5) -> dict:
+
+def safe_get_pods(retries: int = 5, delay: int = 5) -> Any:
     """
     Patched runpod.get_pods to avoid JSON decode errors.
 
@@ -50,6 +52,7 @@ class Pod:
             image_name: str = "runpod/base:0.7.0-ubuntu2404",
             volume_in_gb: int = 50,
             container_disk_in_gb: int = 50,
+            ports: str = Misc.SSH_TCP_PORT,
             gpu_type_id: str | None = None,
             gpu_count: int | None = None,
             network_volume_id: str | None = None,
@@ -75,6 +78,7 @@ class Pod:
         self.image_name = image_name
         self.volume_in_gb = volume_in_gb
         self.container_disk_in_gb = container_disk_in_gb
+        self.ports = ports
         self.support_public_ip = True
         self.start_ssh = True
         self.gpu_type_id = gpu_type_id
@@ -110,6 +114,7 @@ class Pod:
                     image_name=self.image_name,
                     volume_in_gb=self.volume_in_gb,
                     container_disk_in_gb=self.container_disk_in_gb,
+                    ports=self.ports,
                     support_public_ip=self.support_public_ip,
                     start_ssh=self.start_ssh,
                     gpu_type_id=self.gpu_type_id,
@@ -192,10 +197,6 @@ class Pod:
         ip = data["publicIp"]
         if ip:
             port = data["portMappings"]["22"]
-            # For GPU pods, the above is overwritten to udp port
-            if self.gpu_count:
-                # Runpod assigns tcp port as udp port -1
-                port -= 1
         else:
             port = None
         return ip, port
