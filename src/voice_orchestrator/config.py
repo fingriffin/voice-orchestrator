@@ -1,11 +1,11 @@
 """Configuration management for unified master configuration (finetuning + inference)."""
 
+import os
 from pathlib import Path
 from typing import Any, Optional
-import os
-from dotenv import load_dotenv
 
 import yaml
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
@@ -28,7 +28,10 @@ class FinetuneConfig(BaseModel):
     gpu_type: str = Field("NVIDIA A40", description="GPU type (will be routed upward)")
     gpus: int = Field(1, description="Number of GPUs to use")
     volume_in_gb: int = Field(50, description="Volume size in GB (will be routed upward)")
-    container_disk_in_gb: int = Field(50, description="Container size in GB (will be routed upward)")
+    container_disk_in_gb: int = Field(
+        50,
+        description="Container size in GB (will be routed upward)"
+    )
 
     epochs: int = Field(3, description="Number of training epochs")
     micro_batch_size: int = Field(2, description="Micro batch size")
@@ -73,7 +76,10 @@ class InferenceConfig(BaseModel):
     gpu_type: str = Field("NVIDIA A40", description="GPU type (will be routed upward)")
     gpus: int = Field(1, description="Number of GPUs to use")
     volume_in_gb: int = Field(50, description="Volume size in GB (will be routed upward)")
-    container_disk_in_gb: int = Field(50, description="Container size in GB (will be routed upward)")
+    container_disk_in_gb: int = Field(
+        50,
+        description="Container size in GB (will be routed upward)"
+    )
     quantization: Optional[str] = Field(
         None, description="Quantization method (e.g. 4bit or 8bit)"
     )
@@ -87,6 +93,70 @@ class InferenceConfig(BaseModel):
         output_path.parent.mkdir(parents=True, exist_ok=True)
         return v
 
+class LegomenaConfig(BaseModel):
+    """Configuration for legomena calculations with style bench."""
+
+    hapax: bool = True
+    dislegomena: bool = True
+    trilegomina: bool = True
+
+
+class RichnessConfig(BaseModel):
+    """Configuration for lexical richness calculations with style bench."""
+
+    mattr: bool = True
+    ttr: bool = True
+
+
+class SentimentConfig(BaseModel):
+    """Configuration for sentiment analysis with style bench."""
+
+    model_name: str = "j-hartmann/emotion-english-distilroberta-base"
+    classes: int = 7
+    batch_size: int = 64
+
+
+class LexicalConfig(BaseModel):
+    """Configuration for lexical analysis with style bench."""
+
+    richness: RichnessConfig = RichnessConfig()
+    word_length: bool = True
+    function_words: bool = True
+    density: bool = True
+    legomena: LegomenaConfig = LegomenaConfig()
+    sentiment: SentimentConfig = SentimentConfig()
+
+
+class ComparisonConfig(BaseModel):
+    """Configuration for response comparison analysis with style bench."""
+
+    run_comparison: Optional[bool] = True
+    reference_key: Optional[str] = "reference_response"
+
+
+class DataConfig(BaseModel):
+    """Configuration for data analysis with style bench."""
+
+    data_path: Optional[str] = "data/results.json"
+    target_key: Optional[str] = "generated_response"
+    output_path: Optional[str] = "output/"
+
+    @field_validator("output_path")
+    def create_output_path(cls, v: str) -> str:
+        """Ensure the output directory for analysis exists."""
+        Path(v).mkdir(parents=True, exist_ok=True)
+        return v
+
+
+class AnalyzeConfig(BaseModel):
+    """Configuration for analyzing model outputs with style bench."""
+
+    lexical: LexicalConfig = LexicalConfig()
+    data: Optional[DataConfig] = DataConfig()
+    compare: Optional[ComparisonConfig] = ComparisonConfig()
+    # Can be defined by the user
+    experiment_name: Optional[str] = None
+    description: Optional[str] = None
 
 class MasterConfig(BaseModel):
     """Master configuration combining finetuning and inference settings."""
@@ -101,11 +171,18 @@ class MasterConfig(BaseModel):
     volume_in_gb_finetune: int = Field(50, description="Volume for finetuning")
     volume_in_gb_inference: int = Field(50, description="Volume for inference")
 
-    container_disk_in_gb_finetune: int = Field(50, description="Container disk for finetuning")
-    container_disk_in_gb_inference: int = Field(50, description="Container disk for inference")
+    container_disk_in_gb_finetune: int = Field(
+        50,
+        description="Container disk for finetuning"
+    )
+    container_disk_in_gb_inference: int = Field(
+        50,
+        description="Container disk for inference"
+    )
 
     finetune: FinetuneConfig
     inference: InferenceConfig
+    analyze: AnalyzeConfig
 
     @model_validator(mode="after")
     def route_shared_fields(cls, values: "MasterConfig") -> "MasterConfig":
@@ -120,6 +197,7 @@ class MasterConfig(BaseModel):
 
         finetune = values.finetune
         inference = values.inference
+        analyze = values.analyze
 
         if getattr(finetune, "gpu_type", None):
             values.gpu_type_finetune = finetune.gpu_type
@@ -151,6 +229,8 @@ class MasterConfig(BaseModel):
 
         inference.model = merged_name
         inference.test_data = data_path
+
+        analyze.experiment_name = name
 
         if finetune.load_in_4bit:
             inference.quantization = "4bit"

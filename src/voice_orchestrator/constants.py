@@ -13,12 +13,14 @@ class TemplateIds:
 
     FINETUNE = "eziymt38z4"
     INFERENCE = "lwox0565zs"
+    ANALYZE = ""
 
 class ImageNames:
     """RunPod image names."""
 
     FINETUNE = "ghcr.io/fingriffin/voice-finetune:latest" # Private
     INFERENCE = "ghcr.io/fingriffin/voice-inference:latest" # Private
+    ANALYZE = "ghcr.io/fingriffin/style-bench:latest" # Private
 
 class ConfigTypes:
     """Config types for experiment tracking."""
@@ -27,6 +29,7 @@ class ConfigTypes:
     SUB_CONFIGS = {
         "finetune": "FinetuneConfig",
         "inference": "InferenceConfig",
+        "analyze": "AnalyzeConfig",
     }
 
 class Misc:
