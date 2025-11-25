@@ -7,13 +7,14 @@ class BashCommands:
     ACTIVATE = "source .venv/bin/activate"
     FINETUNE = "finetune"
     INFERENCE = "infer"
+    ANALYZE = "analyze"
 
 class TemplateIds:
     """RunPod template IDs."""
 
     FINETUNE = "eziymt38z4"
     INFERENCE = "lwox0565zs"
-    ANALYZE = ""
+    ANALYZE = "ufld0ha15b"
 
 class ImageNames:
     """RunPod image names."""

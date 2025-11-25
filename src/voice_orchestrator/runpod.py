@@ -409,3 +409,53 @@ class InferencePod(Pod):
             ]
         )
         self.execute(cmd, stream=True)
+
+class AnalyzePod(Pod):
+    """Pod class to manage analysis CPU pod."""
+
+    def __init__(
+            self,
+            name: str = "voice-analyze",
+            template_id: str = TemplateIds.ANALYZE,
+            image_name: str = ImageNames.ANALYZE,
+            volume_in_gb: int = 10,
+            container_disk_in_gb: int = 20,
+    ):
+        """
+        Initialise analysis pod.
+
+        :param name: name of the pod
+        :param template_id: id of the template to use
+        :param volume_in_gb: disk volume in GB
+        :param container_disk_in_gb: container disk in GB
+        """
+        super().__init__(
+            name=name,
+            template_id=template_id,
+            image_name=image_name,
+            volume_in_gb=volume_in_gb,
+            container_disk_in_gb=container_disk_in_gb,
+        )
+
+        self._write_dotenv()
+
+    def analyze(self, config_path: str, wandb_run_id: str) -> None:
+        """
+        Execute inference command on the pod.
+
+        :param config_path: path to finetune config file
+        :param wandb_run_id: wandb run id to log to
+        :return: None
+        """
+        cmd = "&&".join(
+            [
+                BashCommands.GO_TO_APP,
+                BashCommands.ACTIVATE,
+                (
+                        BashCommands.ANALYZE
+                        + f" {config_path}"
+                        + f" --wandb-run-id={wandb_run_id}"
+                ),
+            ]
+        )
+        self.execute(cmd, stream=True)
