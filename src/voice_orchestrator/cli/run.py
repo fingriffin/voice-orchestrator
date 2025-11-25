@@ -91,6 +91,11 @@ def main(
         config_path=inference_config_uri,
         wandb_run_id=run.id,
     )
+    inference_pod.infer(
+        config_path=inference_config_uri,
+        wandb_run_id=run.id,
+        base_model=config.model_name,
+    )
 
     inference_pod.kill()
 

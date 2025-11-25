@@ -389,12 +389,17 @@ class InferencePod(Pod):
 
         self._write_dotenv()
 
-    def infer(self, config_path: str, wandb_run_id: str) -> None:
+    def infer(self,
+              config_path: str,
+              wandb_run_id: str,
+              base_model: str | None = None,
+              ) -> None:
         """
         Execute inference command on the pod.
 
         :param config_path: path to finetune config file
         :param wandb_run_id: wandb run id to log to
+        :param base_model: base model to use (if any)
         :return: None
         """
         cmd = "&&".join(
@@ -405,6 +410,7 @@ class InferencePod(Pod):
                         BashCommands.INFERENCE
                         + f" {config_path}"
                         + f" --wandb-run-id={wandb_run_id}"
+                        + str(f" --base-model={base_model}" if base_model else "")
                 ),
             ]
         )
