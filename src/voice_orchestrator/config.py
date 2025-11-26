@@ -8,6 +8,8 @@ import yaml
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from voice_orchestrator.constants import Misc
+
 
 class FinetuneConfig(BaseModel):
     """Configuration for finetuning a model with LoRA/QLoRA adapters."""
@@ -263,4 +265,8 @@ def load_wandb_config(config_path: str) -> dict[str, Any]:
     if "name" in config_dict:
         config_dict.pop("name")
 
-    return config_dict
+    # Renumber keys for clean ordering
+    return {
+        Misc.NUMBERED_KEYS.get(key,key): val
+        for key, val in config_dict.items()
+    }

@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from loguru import logger
 
 from voice_orchestrator.config import load_master_config
-from voice_orchestrator.constants import ConfigTypes, ASCII_LOGO
+from voice_orchestrator.constants import ASCII_LOGO, ConfigTypes
 from voice_orchestrator.logging import setup_logging
 from voice_orchestrator.runpod import AnalyzePod, FinetunePod, InferencePod, Pod
 from voice_orchestrator.wandb import WandbRun
@@ -97,7 +97,7 @@ def main(
     inference_pod.infer(
         config_path=inference_config_uri,
         wandb_run_id=run.id,
-        base_model=config.model_name,
+        base_model=config.finetune.model_name,
     )
 
     inference_pod.kill()
