@@ -66,6 +66,7 @@ def main(
         gpu_type_id=config.gpu_type_finetune, # type: ignore[arg-type]
         gpu_count=config.finetune.gpus,
         volume_in_gb=config.volume_in_gb_finetune,
+        container_disk_in_gb=config.container_disk_in_gb_finetune,
     )
 
     # Run finetuning job with saved finetune config artifact
@@ -84,6 +85,7 @@ def main(
         gpu_type_id=config.gpu_type_inference, # type: ignore[arg-type]
         gpu_count=config.inference.gpus,
         volume_in_gb=config.volume_in_gb_inference,
+        container_disk_in_gb=config.container_disk_in_gb_inference,
     )
 
     # Run inference job with saved inference config artifact
