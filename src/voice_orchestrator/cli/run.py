@@ -73,10 +73,15 @@ def main(
     finetune_config_uri = run.get_config_uri(
         config_type=ConfigTypes.SUB_CONFIGS["finetune"]
     )
-    finetune_pod.finetune(
-        config_path=finetune_config_uri,
-        wandb_run_id=run.id,
-    )
+    try:
+        finetune_pod.finetune(
+            config_path=finetune_config_uri,
+            wandb_run_id=run.id,
+        )
+    except Exception as e:
+        logger.error("Failed to run finetuning job: {}", e)
+        finetune_pod.kill()
+        raise
 
     finetune_pod.kill()
 
@@ -92,15 +97,20 @@ def main(
     inference_config_uri = run.get_config_uri(
         config_type=ConfigTypes.SUB_CONFIGS["inference"]
     )
-    inference_pod.infer(
-        config_path=inference_config_uri,
-        wandb_run_id=run.id,
-    )
-    inference_pod.infer(
-        config_path=inference_config_uri,
-        wandb_run_id=run.id,
-        base_model=config.finetune.model_name,
-    )
+    try:
+        inference_pod.infer(
+            config_path=inference_config_uri,
+            wandb_run_id=run.id,
+        )
+        inference_pod.infer(
+            config_path=inference_config_uri,
+            wandb_run_id=run.id,
+            base_model=config.finetune.model_name,
+        )
+    except Exception as e:
+        logger.error("Failed to run inference job: {}", e)
+        inference_pod.kill()
+        raise
 
     inference_pod.kill()
 
@@ -111,9 +121,14 @@ def main(
     analyze_config_uri = run.get_config_uri(
         config_type=ConfigTypes.SUB_CONFIGS["analyze"]
     )
-    analyze_pod.analyze(
-        config_path=analyze_config_uri,
-        wandb_run_id=run.id,
-    )
+    try:
+        analyze_pod.analyze(
+            config_path=analyze_config_uri,
+            wandb_run_id=run.id,
+        )
+    except Exception as e:
+        logger.error("Failed to run analysis job: {}", e)
+        analyze_pod.kill()
+        raise
 
     analyze_pod.kill()
