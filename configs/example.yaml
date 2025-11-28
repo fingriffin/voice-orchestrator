@@ -17,7 +17,8 @@ finetune:
 
   optimizer: paged_adamw_32bit # Optimizer to use
   gpu_type: # GPU type (e.g. NVIDIA A40) to use for finetuning
-  volume_in_gb: 50 # Volume size in GB for each GPU
+  volume_in_gb: 50 # Volume disk size in GB for all GPUs
+  container_disk_in_gb: 50 # Container disk size in GB
   gpus: 1 # Number of GPUs to use
 
   epochs: 3 # Number of training epochs
@@ -46,7 +47,8 @@ inference:
 
   gpu_type: # GPU type (e.g. NVIDIA A40) to use
   gpus: 1 # Number of GPUs to use
-  volume_in_gb: 50 # Volume size in GB for each GPU
+  volume_in_gb: 50 # Volume disk size in GB for all GPUs
+  container_disk_in_gb: 50 # Container disk size in GB
   max_tokens: 2048 # Maximum number of tokens for generation
 
   output_file: # Local json file name to save the output too (e.g. output.json)

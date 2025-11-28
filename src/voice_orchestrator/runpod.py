@@ -171,18 +171,22 @@ class Pod:
         :param interval: time between checks in seconds
         """
         elapsed = 0
-        while elapsed < timeout:
-            self.public_ip, self.port = self._get_tcp_port()
+        try:
+            while elapsed < timeout:
+                self.public_ip, self.port = self._get_tcp_port()
 
-            if self.public_ip and self.port:
-                msg = f"Pod {self.name} available at: {self.public_ip}:{self.port}"
-                logger.success(msg)
-                return
+                if self.public_ip and self.port:
+                    msg = f"Pod {self.name} available at: {self.public_ip}:{self.port}"
+                    logger.success(msg)
+                    return
 
-            time.sleep(interval)
-            elapsed += interval
+                time.sleep(interval)
+                elapsed += interval
 
-        logger.error(f"Timed out waiting for pod {self.name} to launch.")
+            logger.error(f"Timed out waiting for pod {self.name} to launch.")
+
+        except KeyboardInterrupt:
+            self.kill()
 
     def _get_tcp_port(self) -> tuple[str | None, int | None]:
         """
