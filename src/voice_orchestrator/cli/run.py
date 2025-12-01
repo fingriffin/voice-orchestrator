@@ -7,6 +7,7 @@ from loguru import logger
 
 from voice_orchestrator.config import load_master_config
 from voice_orchestrator.constants import ASCII_LOGO, ConfigTypes
+from voice_orchestrator.errors import PodCommandError, PodInterrupted
 from voice_orchestrator.logging import setup_logging
 from voice_orchestrator.runpod import AnalyzePod, FinetunePod, InferencePod, Pod
 from voice_orchestrator.wandb import WandbRun
@@ -78,8 +79,7 @@ def main(
             config_path=finetune_config_uri,
             wandb_run_id=run.id,
         )
-    except Exception as e:
-        logger.error("Failed to run finetuning job: {}", e)
+    except (PodCommandError, PodInterrupted):
         finetune_pod.kill()
         raise
 
@@ -107,8 +107,7 @@ def main(
             wandb_run_id=run.id,
             base_model=config.finetune.model_name,
         )
-    except Exception as e:
-        logger.error("Failed to run inference job: {}", e)
+    except (PodCommandError, PodInterrupted):
         inference_pod.kill()
         raise
 
@@ -126,8 +125,7 @@ def main(
             config_path=analyze_config_uri,
             wandb_run_id=run.id,
         )
-    except Exception as e:
-        logger.error("Failed to run analysis job: {}", e)
+    except (PodCommandError, PodInterrupted):
         analyze_pod.kill()
         raise
 

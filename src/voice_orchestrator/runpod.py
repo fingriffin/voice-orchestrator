@@ -15,6 +15,9 @@ from dotenv import load_dotenv
 from loguru import logger
 
 from voice_orchestrator.constants import BashCommands, ImageNames, Misc, TemplateIds
+from voice_orchestrator.errors import ErrorMessages
+from voice_orchestrator.errors import PodCommandError as PodCommandError
+from voice_orchestrator.errors import PodInterrupted
 from voice_orchestrator.logging import setup_logging
 
 
@@ -187,6 +190,7 @@ class Pod:
 
         except KeyboardInterrupt:
             self.kill()
+            raise PodInterrupted(ErrorMessages.POD_INTERRUPTED_WAITING)
 
     def _get_tcp_port(self) -> tuple[str | None, int | None]:
         """
@@ -253,7 +257,6 @@ class Pod:
         :return: output of the command or None if error occurs
         """
         ssh = self._connect_ssh()
-
         stdin, stdout, stderr = ssh.exec_command(command, get_pty=stream)
 
         if stream:
@@ -266,36 +269,49 @@ class Pod:
                         text = decoder.decode(raw)
                         print(text, end="")
 
-                final_text = decoder.decode(b"", final=True)
-                if final_text:
-                    print(final_text, end="")
 
-                remainder = stdout.read()
-                if remainder:
-                    print(decoder.decode(remainder, final=True), end="")
+                    if stderr.channel.recv_ready():
+                        err_raw = stderr.channel.recv(1024)
+                        err_text = decoder.decode(err_raw)
+                        print(err_text, end="")
 
-                err_bytes = stderr.read()
-                if err_bytes:
-                    err_text = decoder.decode(err_bytes, final=True)
-                    print(err_text)
-                    logger.error(f"Command error: {err_text.strip()}")
-                    return None
+                    time.sleep(0.05)
+
+                final_out = decoder.decode(b"", final=True)
+                if final_out:
+                    print(final_out, end="")
+
+                full_stderr = stderr.read().decode(errors="ignore").strip()
+                exit_code = stdout.channel.recv_exit_status()
+
+                if exit_code != 0:
+                    # Real error occurred
+                    raise PodCommandError(
+                        full_stderr or f"Command failed with exit code {exit_code}"
+                    )
 
                 return None
+
+            except KeyboardInterrupt:
+                ssh.close()
+                raise PodInterrupted(ErrorMessages.POD_INTERRUPTED_EXECUTION) from None
+
+            except Exception:
+                ssh.close()
+                raise
 
             finally:
                 ssh.close()
 
-        output = stdout.read().decode()
-        error = stderr.read().decode()
+        else:
+            output = stdout.read().decode(errors="ignore")
+            error = stderr.read().decode(errors="ignore")
+            ssh.close()
 
-        ssh.close()
+            if error:
+                raise PodCommandError(error.strip())
 
-        if error:
-            logger.error(f"Command error: {error.strip()}")
-            return None
-
-        return output.strip()
+            return output.strip()
 
     def kill(self) -> None:
         """
