@@ -46,7 +46,7 @@ def main(
     # Load config
     try:
         logger.info("Loading config from {}", config_path)
-        config = load_master_config(config_path)
+        config = load_master_config(config_path, label)
         logger.success("Config loaded successfully!")
         print("Current configuration:")
         print(config.model_dump_json(indent=2))

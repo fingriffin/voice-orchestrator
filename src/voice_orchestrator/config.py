@@ -253,12 +253,23 @@ class MasterConfig(BaseModel):
         return values
 
 
-def load_master_config(config_path: str) -> MasterConfig:
-    """Load master configuration from a YAML file."""
+def load_master_config(
+        config_path: str,
+        label: str | None = None
+) -> MasterConfig:
+    """
+    Load master configuration from a YAML file.
+
+    :param config_path: Path to YAML configuration file
+    :param label: Optional label to use (for multiple run orchestration)
+    :return: master config object
+    """
     with open(config_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
     config_dict = yaml.safe_load("".join(lines))
+    if label:
+        config_dict["name"] = f"{config_dict["name"]}-{label}"
     return MasterConfig(**config_dict)
 
 def load_wandb_config(config_path: str) -> dict[str, Any]:
