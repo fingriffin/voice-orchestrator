@@ -59,6 +59,7 @@ class Pod:
             gpu_type_id: str | None = None,
             gpu_count: int | None = None,
             network_volume_id: str | None = None,
+            label: str | None = None,
     ):
         """
         Initialise Pod class.
@@ -88,6 +89,10 @@ class Pod:
         self.instance_id = "cpu3c-2-4" if gpu_type_id is None else None
         self.gpu_count = gpu_count
         self.network_volume_id = network_volume_id
+        self.label = label
+
+        if self.label:
+            self.name = f"{self.name}:{self.label}"
 
         self.api_key = os.getenv("RUNPOD_API_KEY")
         runpod.api_key = self.api_key
@@ -334,6 +339,7 @@ class FinetunePod(Pod):
             volume_in_gb: int = 50,
             container_disk_in_gb: int = 50,
             gpu_count: int = 1,
+            label: str | None = None,
     ):
         """
         Initialise finetuning pod.
@@ -342,6 +348,7 @@ class FinetunePod(Pod):
         :param name: name of the pod
         :param template_id: id of the template to use
         :param gpu_count: number of gpus to use
+        :param label: label of the pod
         """
         super().__init__(
             name=name,
@@ -351,6 +358,7 @@ class FinetunePod(Pod):
             container_disk_in_gb=container_disk_in_gb,
             gpu_type_id=gpu_type_id,
             gpu_count=gpu_count,
+            label=label,
         )
 
         self._write_dotenv()
@@ -388,6 +396,7 @@ class InferencePod(Pod):
             volume_in_gb: int = 50,
             container_disk_in_gb: int = 50,
             gpu_count: int = 1,
+            label: str | None = None,
     ):
         """
         Initialise inference pod.
@@ -396,6 +405,7 @@ class InferencePod(Pod):
         :param name: name of the pod
         :param template_id: id of the template to use
         :param gpu_count: number of gpus to use
+        :param label: label of the pod
         """
         super().__init__(
             name=name,
@@ -405,6 +415,7 @@ class InferencePod(Pod):
             container_disk_in_gb=container_disk_in_gb,
             gpu_type_id=gpu_type_id,
             gpu_count=gpu_count,
+            label=label,
         )
 
         self._write_dotenv()
@@ -446,6 +457,7 @@ class AnalyzePod(Pod):
             image_name: str = ImageNames.ANALYZE,
             volume_in_gb: int = 10,
             container_disk_in_gb: int = 20,
+            label: str | None = None,
     ):
         """
         Initialise analysis pod.
@@ -454,6 +466,7 @@ class AnalyzePod(Pod):
         :param template_id: id of the template to use
         :param volume_in_gb: disk volume in GB
         :param container_disk_in_gb: container disk in GB
+        :param label: label of the pod
         """
         super().__init__(
             name=name,
@@ -461,6 +474,7 @@ class AnalyzePod(Pod):
             image_name=image_name,
             volume_in_gb=volume_in_gb,
             container_disk_in_gb=container_disk_in_gb,
+            label=label,
         )
 
         self._write_dotenv()

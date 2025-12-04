@@ -17,10 +17,12 @@ from voice_orchestrator.wandb import WandbRun
 @click.argument("config_path")
 @click.option("--log-level", default="INFO", help="Logging level")
 @click.option("--log-file", help="Log file path")
+@click.option("--label", help="Label for orchestration, for running parallel experiments")
 def main(
     config_path: str,
     log_level: str,
     log_file: str | None = None,
+    label: str | None = None,
 ) -> None:
     """
     Run VOICE orchestrator with the specified configuration.
@@ -28,6 +30,7 @@ def main(
     :param config_path: Path to the configuration file
     :param log_level: Logging level
     :param log_file: Log file path
+    :param label: Label for orchestration, for running parallel experiments
     :return: None
     """
     # Setup logging
@@ -43,7 +46,7 @@ def main(
     # Load config
     try:
         logger.info("Loading config from {}", config_path)
-        config = load_master_config(config_path)
+        config = load_master_config(config_path, label)
         logger.success("Config loaded successfully!")
         print("Current configuration:")
         print(config.model_dump_json(indent=2))
@@ -68,6 +71,7 @@ def main(
         gpu_count=config.finetune.gpus,
         volume_in_gb=config.volume_in_gb_finetune,
         container_disk_in_gb=config.container_disk_in_gb_finetune,
+        label=label,
     )
 
     # Run finetuning job with saved finetune config artifact
@@ -91,6 +95,7 @@ def main(
         gpu_count=config.inference.gpus,
         volume_in_gb=config.volume_in_gb_inference,
         container_disk_in_gb=config.container_disk_in_gb_inference,
+        label=label,
     )
 
     # Run inference job with saved inference config artifact
@@ -114,7 +119,7 @@ def main(
     inference_pod.kill()
 
     # Spin up analyze pod
-    analyze_pod = AnalyzePod()
+    analyze_pod = AnalyzePod(label=label)
 
     # Run analysis job with saved analyze config artifact
     analyze_config_uri = run.get_config_uri(
