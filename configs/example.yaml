@@ -46,7 +46,7 @@ finetune:
 
     use_vllm: false # Whether to use vLLM during training
 
-    rewards: # List of reward to use during training
+    reward_funcs: # List of reward to use during training
     reward_weights: # List of reward weights
     num_generations: 1 # Number of generations to sample from
     log_completions: false # Whether to log completions during training
