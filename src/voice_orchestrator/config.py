@@ -14,7 +14,7 @@ from voice_orchestrator.constants import Misc
 class FinetuneConfig(BaseModel):
     """Configuration for LoRA/QLoRA finetuning."""
 
-    base_model: str = Field(..., description="Name of the model to use")
+    base_model: Optional[str] = Field(None, description="Name of the model to use")
     seed: int = Field(42, description="Random seed")
     output_dir: str = Field(..., description="Directory to save checkpoints and outputs")
     device_map: str = Field("auto", description="Device map for model loading")
@@ -211,9 +211,12 @@ class MasterConfig(BaseModel):
     """Master configuration combining finetuning and inference settings."""
 
     base_model: str = Field(..., description="Base HF model to use")
-    data_path: str = Field(..., description="Training data path or dataset name")
     name: str = Field(..., description="Resulting adapter name or output dir")
 
+    finetune_gpus: Optional[int] = Field(
+        None,
+        description="Number of GPUs to use fo finetuning"
+    )
     gpu_type_finetune: Optional[str] = Field(None, description="GPU type for finetuning")
     gpu_type_inference: Optional[str] = Field(None, description="GPU type for inference")
 
