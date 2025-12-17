@@ -14,6 +14,10 @@ from voice_orchestrator.constants import Misc
 class TRLConfig(BaseModel):
     """Configuration for fine-tuning with TRL."""
 
+    beta: float = Field(
+        0.001,
+        description="RL beta hyperparameter",
+    )
     max_completion_len: int = Field(
         2048,
         description="Maximum token length of completions during TRL"
@@ -30,20 +34,6 @@ class TRLConfig(BaseModel):
     log_completions: bool = Field(
         False,
         description="Whether to log completions during training"
-    )
-
-    # Hardcoded as None to force GRPO training
-    sync_ref_model: bool | None = Field(
-        None,
-        description="Whether to synchronize the baseline policy during training"
-    )
-    ref_model_mixup_alpha: float | None = Field(
-        None,
-        description="The mixup alpha parameter for the reference model."
-    )
-    ref_model_sync_steps: int | None = Field(
-        None,
-        description="The number of steps to synchronize the reference model."
     )
 
     scale_rewards: bool = Field(
