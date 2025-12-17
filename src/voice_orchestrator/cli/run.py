@@ -55,7 +55,6 @@ def main(
         logger.error("Failed to load config: {}", e)
         raise
 
-
     # Prepare wandb run
     run = WandbRun(config=config, config_path=config_path)
 
@@ -68,7 +67,7 @@ def main(
     # Spin up finetuning pod
     finetune_pod = FinetunePod(
         gpu_type_id=config.gpu_type_finetune, # type: ignore[arg-type]
-        gpu_count=config.finetune.gpus,
+        gpu_count=config.finetune_gpus, # type: ignore[arg-type]
         volume_in_gb=config.volume_in_gb_finetune,
         container_disk_in_gb=config.container_disk_in_gb_finetune,
         label=label,
@@ -110,7 +109,7 @@ def main(
         inference_pod.infer(
             config_path=inference_config_uri,
             wandb_run_id=run.id,
-            base_model=config.finetune.model_name,
+            base_model=config.base_model,
         )
     except (PodCommandError, PodInterrupted):
         inference_pod.kill()
