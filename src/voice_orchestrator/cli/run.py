@@ -109,7 +109,7 @@ def main(
         inference_pod.infer(
             config_path=inference_config_uri,
             wandb_run_id=run.id,
-            base_model=config.finetune.model_name,
+            base_model=config.base_model,
         )
     except (PodCommandError, PodInterrupted):
         inference_pod.kill()
