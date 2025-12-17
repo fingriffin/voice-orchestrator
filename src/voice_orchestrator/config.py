@@ -12,67 +12,103 @@ from voice_orchestrator.constants import Misc
 
 
 class FinetuneConfig(BaseModel):
-    """Configuration for finetuning a model with LoRA/QLoRA adapters."""
+    """Configuration for LoRA/QLoRA finetuning."""
 
-    model_name: Optional[str] = Field(None, description="Name of the model to use")
-    train_data_path: Optional[str] = Field(None, description="Path to training data")
-    output_dir: Optional[str] = Field(None, description="Directory to save model outputs")
+    base_model: str = Field(..., description="Name of the model to use")
+    seed: int = Field(42, description="Random seed")
+    output_dir: str = Field(..., description="Directory to save checkpoints and outputs")
+    device_map: str = Field("auto", description="Device map for model loading")
 
-    adapter: str = Field(..., description="Name of the adapter to use (e.g. lora)")
-
-    load_in_8bit: bool = Field(False, description="Load model from 8bit")
-    load_in_4bit: bool = Field(False, description="Load model from 4bit")
-    bf16: bool = Field(False, description="Use BF16 precision")
-    fp16: bool = Field(True, description="Use FP16 precision")
-    gradient_checkpointing: bool = Field(True, description="Use gradient checkpointing")
-
-    optimizer: str = Field("paged_adamw_32bit", description="Optimizer to use")
     gpu_type: str = Field("NVIDIA A40", description="GPU type (will be routed upward)")
-    gpus: int = Field(1, description="Number of GPUs to use")
+    gpus: int = Field(1, description="Number of GPUs to use (will be routed upward)")
     volume_in_gb: int = Field(50, description="Volume size in GB (will be routed upward)")
     container_disk_in_gb: int = Field(
         50,
         description="Container size in GB (will be routed upward)"
     )
 
-    epochs: int = Field(3, description="Number of training epochs")
-    micro_batch_size: int = Field(2, description="Micro batch size")
-    gradient_accumulation_steps: int = Field(4, description="Gradient accumulation steps")
+    adapter: str = Field(..., description="Name of the adapter model to use")
+    load_in_8bit: bool = Field(False, description="Load the model from 8bit")
+    load_in_4bit: bool = Field(False, description="Load the model from 4bit")
+    bf16: bool = Field(False, description="Load the model from BF16")
+    fp16: bool = Field(True, description="Load the model from FP16")
+    optimizer: str = Field("paged_adamw_32bit", description="Optimizer to use")
+    num_epochs: int = Field(3, description="Number of training epochs")
     learning_rate: float = Field(2e-4, description="Learning rate")
+    micro_batch_size: int = Field(2, description="Batch size per device")
+    sequence_len: int = Field(1024, description="Maximum sequence length")
+    gradient_accumulation_steps: int = Field(4, description="No. of accumulation steps")
+    gradient_checkpointing: bool = Field(False, description="Use gradient checkpointing")
+    flash_attention: bool = Field(False, description="Use flash attention if available")
 
     lora_r: int = Field(8, description="LoRA rank")
     lora_alpha: int = Field(16, description="LoRA alpha")
     lora_dropout: float = Field(0.05, description="LoRA dropout")
-    lora_target_modules: list[str] = Field([
-    "q_proj",
-    "k_proj",
-    "v_proj",
-    "o_proj",
-    "gate_proj",
-    "up_proj",
-    "down_proj",
-    ],
-    description="List of target modules for LoRA/qLoRA"
+    lora_target_modules: list[str] |  None = Field(
+        None,
+        description="List of target modules for LoRA",
     )
 
-    sequence_len: int = Field(1024, description="Max sequence length")
-    device_map: str = Field("auto", description="Device map for model loading")
-    flash_attention: bool = Field(False, description="Use flash attention")
+    tokenizer_config: str | None = Field(None, description="Tokenizer config")
+    special_tokens: dict[str, str] | None = Field(None, description="Special tokens dict")
 
-    seed: int = Field(42, description="Random seed")
-    checkpointing: bool = Field(False, description="Save checkpoints during training")
-    push_to_hub: bool = Field(True, description="Push model and checkpoints to HF Hub")
-    do_validation: bool = Field(False, description="Run validation during training")
-    do_merge: bool = Field(True, description="Merge LoRA weights after training")
-    adapter_subfolder: Optional[str] = Field(
-        None, description="Adapter subfolder inside adapter repo"
+    save_steps: int | float | None = Field(
+        0,
+        description="When to save model checkpoints",
+    )
+    save_strategy: str | None = Field("no", description="Saving strategy")
+    save_total_limit: int = Field(
+        0,
+        description="Maximum number of checkpoints to save at one point"
+    )
+    save_only_model: bool = Field(
+        True,
+        description="Whether to save only the model",
+    )
+
+    datasets: list[dict[str, str]] = Field(
+        ...,
+        description="Datasets to use"
+    )
+    test_datasets: list[dict[str, str]] = Field(
+        ...,
+        description="Validation datasets to use"
+    )
+    eval_steps: int | None = Field(
+        1,
+        description="How often to run validation, in steps"
+    )
+
+    use_wandb: bool = Field(True, description="Whether to use wandb")
+    wandb_project: str = Field(
+        os.getenv("WANDB_PROJECT"),
+        description="wandb project name",
+    )
+    wandb_entity: str = Field(
+        os.getenv("WANDB_ENTITY"),
+        description="wandb entity name",
+    )
+    wandb_watch: str = Field(
+        "checkpoint",
+        description="When to log model artifact"
+    )
+    wandb_log_model: str = Field(
+        "checkpoint",
+        description="When to log model artifact"
+    )
+    hub_model_id: str = Field(
+        ...,
+        description="Where to push checkpoints to on HF hub"
+    )
+    hub_strategy: str = Field(
+        "end",
+        description="How to push checkpoints to HF hub"
     )
 
     @field_validator("output_dir")
-    def ensure_output_dir_exists(cls, v: Optional[str]) -> Optional[str]:
-        """Ensure the output directory for finetuning exists."""
-        if v is not None:
-            Path(v).mkdir(parents=True, exist_ok=True)
+    def create_output_path(cls, v: str) -> str:
+        """Ensure output directory exists."""
+        Path(v).mkdir(parents=True, exist_ok=True)
         return v
 
 
@@ -204,7 +240,6 @@ class MasterConfig(BaseModel):
         hf_org = os.getenv("HF_ORG")
 
         base_model = values.base_model
-        data_path = values.data_path
         name = values.name
         merged_name = f"{hf_org}/" + name + "-Merged"
 
@@ -228,6 +263,10 @@ class MasterConfig(BaseModel):
             values.volume_in_gb_inference = inference.volume_in_gb
             delattr(inference, "volume_in_gb")
 
+        if getattr(finetune, "gpus", None):
+            values.finetune_gpus = finetune.gpus
+            delattr(finetune, "gpus")
+
         if getattr(finetune, "container_disk_in_gb", None):
             values.container_disk_in_gb_finetune = finetune.container_disk_in_gb
             delattr(finetune, "container_disk_in_gb")
@@ -236,12 +275,11 @@ class MasterConfig(BaseModel):
             values.container_disk_in_gb_inference = inference.container_disk_in_gb
             delattr(inference, "container_disk_in_gb")
 
-        finetune.model_name = base_model
-        finetune.train_data_path = data_path
+        finetune.base_model = base_model
         finetune.output_dir = name
 
         inference.model = merged_name
-        inference.test_data = data_path
+        inference.test_data = finetune.datasets[0]["path"]
 
         analyze.experiment_name = name
 
