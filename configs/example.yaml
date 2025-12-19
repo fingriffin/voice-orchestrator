@@ -27,7 +27,7 @@ finetune:
   micro_batch_size: 1 # Micro batch size
   sequence_len: 512 # Maximum input length to fine-tune with
   gradient_accumulation_steps: 1 # Gradient accumulation steps
-  gradient_checkpointing: False # Whether to use gradient checkpointing
+  gradient_checkpointing: False # Whether to use gradient checkpointing; not recommended for GRPO training
   flash_attention: # Whether to use flash attention
 
   lora_r: # LoRA rank
