@@ -11,6 +11,27 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from voice_orchestrator.constants import Misc
 
 
+class TRLConfig(BaseModel):
+    """Configuration for fine-tuning with TRL."""
+
+    beta: float = Field(
+        0.001,
+        description="RL beta hyperparameter",
+    )
+    max_completion_len: int = Field(
+        2048,
+        description="Maximum token length of completions during TRL"
+    )
+    use_vllm: bool = Field(False, description="Whether to use vLLM during training")
+    num_generations: int = Field(1, description="Number of generations to sample")
+    reward_funcs: list[str] = Field(..., description="List of stylometric rewards to use")
+    reward_weights: list[float] = Field(
+        ...,
+        description="List of weights for stylometric rewards"
+    )
+
+
+
 class FinetuneConfig(BaseModel):
     """Configuration for LoRA/QLoRA finetuning."""
 
@@ -47,6 +68,12 @@ class FinetuneConfig(BaseModel):
     lora_target_modules: list[str] |  None = Field(
         None,
         description="List of target modules for LoRA",
+    )
+
+    rl: Optional[str] = Field(None, description="Name of RL model to use (e.g. GRPO)")
+    trl: Optional[TRLConfig] = Field(
+        None,
+        description="Optional configuration for TRL"
     )
 
     tokenizer_config: str | None = Field(None, description="Tokenizer config")
