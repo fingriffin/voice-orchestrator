@@ -46,6 +46,7 @@ finetune:
     max_completion_len: 2048 # Maximum token length of completions during TRL
     use_vllm: false # Whether to use vLLM during training
     num_generations: 1 # Number of generations to sample from
+    # Note, num_generations must be a factor of global batch size = micro_batch_size x num_gpus x gradient_accumulation_steps
     reward_funcs: # List of reward to use during training
     reward_weights: # List of reward weights
 
