@@ -165,6 +165,10 @@ class InferenceConfig(BaseModel):
         None, description="Quantization method (e.g. 4bit or 8bit)"
     )
     max_tokens: int = Field(2048, description="Maximum tokens to generate")
+    temperature: float = Field(
+        0.7,
+        description="Temperature for sampling during inference"
+    )
     output_file: str = Field(..., description="File path to save inference output")
 
     @field_validator("output_file")

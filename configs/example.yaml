@@ -91,5 +91,6 @@ inference:
   volume_in_gb: 50 # Volume disk size in GB for all GPUs
   container_disk_in_gb: 50 # Container disk size in GB
   max_tokens: 2048 # Maximum number of tokens for generation
+  temperature: 0.7 # Temperature for sampling during inference, must be the same as finetune.trl.temperature if using GRPO
 
   output_file: # Local json file name to save the output too (e.g. output.json)
