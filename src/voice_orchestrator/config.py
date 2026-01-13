@@ -116,7 +116,7 @@ class FinetuneConfig(BaseModel):
         description="Validation datasets to use"
     )
     eval_steps: int | float | None = Field(
-        1,
+        None,
         description="How often to run validation, in steps"
     )
 
