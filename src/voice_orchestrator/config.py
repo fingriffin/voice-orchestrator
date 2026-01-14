@@ -44,7 +44,22 @@ class TRLConfig(BaseModel):
         description="Number of completions to print during training"
     )
 
+class VLLMConfig(BaseModel):
+    """Configuration for vLLM engine."""
 
+    # Defaults for following fields enforced by axolotl's config validator
+    # host: 0.0.0.0
+    # port: 8000
+    # gpu_memory_utilisation: 0.9
+    # dtype: auto
+    tensor_parallel_size: int = Field(
+        ...,
+        description="Tensor parallel size for vLLM",
+    )
+    max_model_len: int | None = Field(
+        None,
+        description="Maximum context length for vLLM",
+    )
 
 class FinetuneConfig(BaseModel):
     """Configuration for LoRA/QLoRA finetuning."""
@@ -88,6 +103,11 @@ class FinetuneConfig(BaseModel):
     trl: Optional[TRLConfig] = Field(
         None,
         description="Optional configuration for TRL"
+    )
+
+    vllm: Optional[VLLMConfig] = Field(
+        None,
+        description="Optional configuration for vLLM (recommended for GRPO)"
     )
 
     tokenizer_config: str | None = Field(None, description="Tokenizer config")
