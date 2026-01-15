@@ -22,8 +22,8 @@ class TRLConfig(BaseModel):
         2048,
         description="Maximum token length of completions during TRL"
     )
-    use_vllm: bool = Field(False, description="Whether to use vLLM during training")
-    num_generations: int = Field(1, description="Number of generations to sample")
+    # TODO: Validate that if use_vllm = True, then vllm config exists (and vice versa)
+    num_generations: int = Field(4, description="Number of generations to sample")
     reward_funcs: list[str] = Field(..., description="List of stylometric rewards to use")
     reward_weights: list[float] = Field(
         ...,
@@ -32,7 +32,7 @@ class TRLConfig(BaseModel):
 
     temperature: float = Field(
         0.7,
-        description="Temperature for GRPO sampling when calculating advantages"
+        description="Temperature for GRPO sampling when calculating advantages."
     )
 
     log_completions: bool | None = Field(
@@ -41,23 +41,34 @@ class TRLConfig(BaseModel):
     )
     num_completions_to_print: int | None = Field(
         None,
-        description="Number of completions to print during training"
+        description="Number of completions to print"
+    )
+
+    # vLLM settings
+    use_vllm: bool = Field(False, description="Whether to use vLLM during training")
+    vllm_mode: str | None = Field("server", description="vLLM mode")
+    vllm_server_host: str | None = Field(
+        "127.0.0.1",
+        description="vLLM server host"
     )
 
 class VLLMConfig(BaseModel):
     """Configuration for vLLM engine."""
 
     # Defaults for following fields enforced by axolotl's config validator
-    # host: 0.0.0.0
     # port: 8000
     # gpu_memory_utilisation: 0.9
     # dtype: auto
+    host: str | None = Field(
+        "127.0.0.1",
+        description="vLLM server host"
+    )
     tensor_parallel_size: int = Field(
         ...,
         description="Tensor parallel size for vLLM",
     )
-    max_model_len: int | None = Field(
-        None,
+    max_model_len: int = Field(
+        ...,
         description="Maximum context length for vLLM",
     )
 
@@ -90,6 +101,7 @@ class FinetuneConfig(BaseModel):
     gradient_accumulation_steps: int = Field(4, description="No. of accumulation steps")
     gradient_checkpointing: bool = Field(False, description="Use gradient checkpointing")
     flash_attention: bool = Field(False, description="Use flash attention if available")
+    tensor_parallel_size: int = Field(1, description="Tensor parallel size for training")
 
     lora_r: int = Field(8, description="LoRA rank")
     lora_alpha: int = Field(16, description="LoRA alpha")

@@ -29,6 +29,7 @@ finetune:
   gradient_accumulation_steps: 1 # Gradient accumulation steps
   gradient_checkpointing: False # Whether to use gradient checkpointing; not recommended for GRPO training
   flash_attention: # Whether to use flash attention
+  tensor_parallel_size: 1 # Tensor parallel size for training
 
   lora_r: # LoRA rank
   lora_alpha: # LoRA alpha
@@ -44,17 +45,20 @@ finetune:
 
     beta: 0.001 # RL beta hyperparameter
     max_completion_length: 2048 # Maximum token length of completions during TRL
-    use_vllm: false # Whether to use vLLM during training
-    num_generations: 1 # Number of generations to sample from
-    # Note, num_generations must be a factor of global batch size = micro_batch_size x num_gpus x gradient_accumulation_steps
+    num_generations: 4 # Number of generations to sample from
     reward_funcs: # List of reward to use during training
     reward_weights: # List of reward weights
     temperature: 0.7 # Temperature for GRPO sampling when calculating advantages
-    log_completions: false # Whether to log completions during training
-    num_completions_to_print: # Number of completions to print if log_completions
+    log_completions: False # Whether to log completions during training
+    num_completions: # Number of completions to print if log_completions
+
+    use_vllm: false # Whether to use vLLM during training
+    vllm_mode: server # Mode to run vLLM server in - do not change
+    vllm_server_host: 127.0.0.1 # Local host for vLLM server - do not change
 
   vllm: # Optional configuration for vLLM, do not include/leave empty if not using (recommended for GRPO)
 
+    host: 127.0.0.1 # Local host for vLLM server - do not change
     tensor_parallel_size: # Tensor parallel size for vLLM, that is the number of gpus used to serve the vLLM engine
     max_model_len: # Maximum context length for vLLM engine
 
